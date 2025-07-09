@@ -1,0 +1,196 @@
+/* PrintableCv.css - Optimized for Print/Preview Consistency */
+
+/* Base styles for both screen and print */
+.cv-container {
+  background: white;
+  width: 21cm;
+  min-height: 29.7cm;
+  margin: 0 auto;
+  color: #333;
+  font-family: Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Ensure all elements inherit box-sizing */
+.cv-container * {
+  box-sizing: inherit;
+}
+
+/* Header styles */
+.cv-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.cv-header h1 {
+  font-size: 22pt;
+  font-weight: bold;
+  margin: 0 0 0.5rem 0;
+  color: #111;
+}
+
+.contact-info, .location, .portfolio-link {
+  font-size: 11pt;
+  margin: 0.25rem 0;
+}
+
+.portfolio-link {
+  color: var(--primary-color, #2563eb);
+  text-decoration: none;
+}
+
+/* Section styles */
+.cv-section {
+  margin-bottom: 1.25rem;
+  page-break-inside: avoid;
+}
+
+.cv-section h2 {
+  font-size: 14pt;
+  font-weight: bold;
+  color: var(--primary-color, #2563eb);
+  padding-bottom: 0.25rem;
+  margin-bottom: 0;
+}
+
+.cv-section .section-divider {
+  width: 100%;
+  height: 1px;
+  margin: 0.75rem 0;
+  background-color: var(--divider-color, #e0e0e0);
+}
+
+/* Entry styles */
+.entry {
+  margin-bottom: 1rem;
+  page-break-inside: avoid;
+}
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.25rem;
+}
+
+.entry-header h3 {
+  font-size: 12pt;
+  font-weight: bold;
+  margin: 0;
+}
+
+.duration, .date, .tech {
+  font-size: 11pt;
+  font-style: italic;
+  color: #555;
+}
+
+/* List styles */
+.bullet-list {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+  list-style-type: disc;
+}
+
+.bullet-list li {
+  margin-bottom: 0.25rem;
+}
+
+/* Skills styles */
+.skills-group {
+  margin-bottom: 0.5rem;
+}
+
+.skills-group strong {
+  font-weight: bold;
+}
+
+/* Utility styles */
+.summary-text {
+  margin: 0.5rem 0;
+}
+
+.gpa, .field-of-study {
+  font-size: 10pt;
+  color: #666;
+  margin: 0.25rem 0;
+}
+
+/* Tailwind-like utility classes */
+.font-semibold {
+  font-weight: 600;
+}
+
+.text-sm {
+  font-size: 0.875em;
+  color: #4b5563;
+}
+
+.text-xs {
+  font-size: 0.75em;
+  color: #6b7280;
+}
+
+/* Print-specific adjustments */
+@media print {
+  @page {
+    size: A4;
+    margin: 1cm;
+  }
+
+  body {
+    background: white;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .cv-container {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+    font-family: Calibri, Arial, sans-serif;
+  }
+
+  /* Force colors in print */
+  .portfolio-link,
+  .cv-section h2 {
+    color: var(--primary-color) !important;
+  }
+
+  .section-divider {
+    background-color: var(--divider-color) !important;
+  }
+
+  /* Link handling */
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  /* Ensure proper spacing */
+  .cv-section {
+    margin-bottom: 1.25rem;
+  }
+
+  /* Prevent unwanted page breaks */
+  .entry, .cv-section {
+    page-break-inside: avoid;
+  }
+}
+
+/* Screen-specific adjustments */
+@media screen {
+  .cv-container {
+    padding: 2cm;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin: 2rem auto;
+  }
+}

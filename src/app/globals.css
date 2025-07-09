@@ -24,3 +24,10 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.hidden-for-printing {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  /* You can also add z-index: -1 if you ever experience weird layout shifts */
+}
