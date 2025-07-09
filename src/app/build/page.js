@@ -1,3 +1,4 @@
+// src/app/build/page.js
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -30,7 +31,7 @@ const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primary
         { id: 'country', question: "And which country?", placeholder: "e.g., USA", optional: true, dataKey: 'personalInformation' },
         { id: 'portfolioLink', question: "Do you have a portfolio or website link?", placeholder: "e.g., github.com/johndoe", optional: true, dataKey: 'personalInformation' },
         { id: 'summary', question: "In one or two sentences, summarize your professional experience.", placeholder: "e.g., I'm a software engineer with over 8 years of experience building scalable web applications.", required: true, isTextarea: true },
-        { id: 'experience', question: "Tell us about your most relevant job. (Role, Company, Achievements)", placeholder: "e.g., At TechCorp, as a Lead Dev, I led a project that reduced server costs by 20%...", isTextarea: true, required: true, dataKey: 'experience' },
+        { id: 'experience', question: "Tell us about your most relevant job. (Role, Company, Achievements)", placeholder: "e.g., At TechCorp, as a Lead Dev, I designed and implemented a new CI/CD testing pipeline using Jenkins and Selenium, which decreased server costs by 20%...", isTextarea: true, required: true, dataKey: 'experience' },
         { id: 'technical', question: "List your key technical skills.", placeholder: "e.g., Java, Python, React, AWS, Docker", required: true, dataKey: 'skills' },
         { id: 'soft', question: "And what are your most important soft skills?", placeholder: "e.g., Team Leadership, Project Management, Communication", required: true, dataKey: 'skills' },
         { id: 'languages', question: "Which languages do you speak, and at what level?", placeholder: "e.g., English (Native), Spanish (Conversational)", optional: true, dataKey: 'skills' },
@@ -331,10 +332,11 @@ const CvBuilder = () => {
 
     const debouncedCvData = useDebounce(cvData, 3000);
     useEffect(() => {
+        // Only attempt to save if the page is ready, a mode is selected, and we have data/ID
         if (pageState === 'READY' && mode && cvData && cvId) {
             saveProgressToCloud(cvData, cvName);
         }
-    }, [debouncedCvData, cvName, pageState, mode, cvData, cvId]);
+    }, [debouncedCvData, cvName, pageState, mode, cvData, cvId, saveProgressToCloud]); // <-- FIX: Added saveProgressToCloud to dependencies
 
     const generateCvFromUserInput = async () => {
         setIsAiLoading(true);
@@ -390,7 +392,7 @@ const CvBuilder = () => {
                 }
             } else {
                 newCvData[id] = value;
-            }
+            C }
             return newCvData;
         });
     };

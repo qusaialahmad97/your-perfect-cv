@@ -1,10 +1,10 @@
-// src/pages/ATSCheckerPage.jsx
-"use client"; // This page uses state and event handlers
+// src/app/ats-checker/page.js
+"use client"; // This page uses state and event handlers and is a Client Component
 
-import React, { useState } from 'react';
-import { getTextFromPdf } from '@/utils/parsePdf';
+import React, { useState, useEffect } from 'react';
+// import { getTextFromPdf } from '@/utils/parsePdf'; // <--- DO NOT IMPORT GLOBALLY ANYMORE
 import ATSResult from '@/components/ats/ATSResult';
-import { aiService } from '@/services/aiService'; // <-- IMPORT THE AI SERVICE
+import { aiService } from '@/services/aiService'; // aiService is likely server-compatible, so keep it direct
 
 const ATSCheckerPage = () => {
   const [cvFile, setCvFile] = useState(null);
@@ -14,22 +14,53 @@ const ATSCheckerPage = () => {
   const [error, setError] = useState('');
   const [analysisResult, setAnalysisResult] = useState(null);
 
+  // State to hold the dynamically loaded getTextFromPdf function
+  const [clientSideGetTextFromPdf, setClientSideGetTextFromPdf] = useState(null);
+
+  // Use useEffect to dynamically import the PDF parser module only on the client
+  useEffect(() => {
+    // Ensure this runs only in the browser environment
+    if (typeof window !== 'undefined') {
+      import('@/utils/parsePdf')
+        .then(mod => {
+          // Check if getTextFromPdf exists in the module
+          if (mod && mod.getTextFromPdf) {
+            setClientSideGetTextFromPdf(() => mod.getTextFromPdf);
+          } else {
+            console.error("Failed to find getTextFromPdf in module.");
+            setError("Initialization error: PDF parser function not found.");
+          }
+        })
+        .catch(err => {
+          console.error("Error loading PDF parser module:", err);
+          setError("Failed to load PDF processing capabilities. Please try reloading the page.");
+        });
+    }
+  }, []); // Empty dependency array means this runs once on component mount (client-side)
+
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setCvFile(file);
-      setIsLoading(true);
-      setError('');
-      try {
-        const text = await getTextFromPdf(file);
-        setCvText(text);
-      } catch (err) {
-        setError(err.message);
-        setCvFile(null);
-        setCvText('');
-      } finally {
-        setIsLoading(false);
-      }
+    if (!file) return; // Exit if no file selected
+
+    // Ensure the clientSideGetTextFromPdf function is loaded before proceeding
+    if (!clientSideGetTextFromPdf) {
+      setError('PDF processing module is still loading or failed to load. Please wait a moment and try again.');
+      return;
+    }
+
+    setCvFile(file);
+    setIsLoading(true);
+    setError(''); // Clear previous errors
+    try {
+      // Use the dynamically loaded function to get text from PDF
+      const text = await clientSideGetTextFromPdf(file);
+      setCvText(text);
+    } catch (err) {
+      setError(`Error processing PDF: ${err.message || 'An unknown error occurred during PDF parsing.'}`);
+      setCvFile(null);
+      setCvText('');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -70,7 +101,7 @@ const ATSCheckerPage = () => {
       const responseText = await aiService.callAI(prompt, 0.5); // Using the generic callAI method
 
       if (responseText) {
-          const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+          const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').replace(/```/g, '').trim(); // Ensure all backticks are removed
           try {
             const parsedJson = JSON.parse(cleanedText);
             setAnalysisResult(parsedJson);
@@ -105,6 +136,8 @@ const ATSCheckerPage = () => {
               accept=".pdf"
               onChange={handleFileChange}
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              // Disable file input if the parser is not loaded yet
+              disabled={!clientSideGetTextFromPdf} 
             />
             {cvFile && <p className="mt-3 text-sm text-green-600">✅ {cvFile.name} uploaded successfully.</p>}
           </div>
@@ -122,13 +155,15 @@ const ATSCheckerPage = () => {
         </div>
       ) : null}
 
+      {/* Display general error messages */}
       {error && <div className="mt-6 bg-red-100 text-red-700 p-3 rounded-md" role="alert">{error}</div>}
 
       <div className="mt-8 text-center">
         {!analysisResult ? (
           <button
             onClick={handleAnalysis}
-            disabled={isLoading || !cvFile || !jobDescription}
+            // Add condition to disable if PDF parser is not ready
+            disabled={isLoading || !cvFile || !jobDescription || !clientSideGetTextFromPdf}
             className="bg-green-600 text-white font-bold py-3 px-12 rounded-lg shadow-md hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Analyzing...' : 'Analyze My CV'}
