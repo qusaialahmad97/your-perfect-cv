@@ -1,7 +1,7 @@
 // src/app/build/page.js
-"use client";
+"use client"; // This is correctly marked as a Client Component
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react'; // Import useCallback and Suspense
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -303,7 +303,8 @@ const CvBuilder = () => {
         setupCv();
     }, [user, loading, searchParams, router]);
 
-    const saveProgressToCloud = async (dataToSave, nameOfCv) => {
+    // FIX: Wrapped saveProgressToCloud in useCallback
+    const saveProgressToCloud = useCallback(async (dataToSave, nameOfCv) => {
         if (!user || !cvId) { return; }
         try {
             const { aiHelpers, ...cvDataToSave } = dataToSave;
@@ -328,7 +329,7 @@ const CvBuilder = () => {
         } catch (error) {
             console.error("Autosave failed:", error);
         }
-    };
+    }, [user, cvId, mode]); // Dependencies for useCallback: user, cvId, mode
 
     const debouncedCvData = useDebounce(cvData, 3000);
     useEffect(() => {
@@ -336,7 +337,7 @@ const CvBuilder = () => {
         if (pageState === 'READY' && mode && cvData && cvId) {
             saveProgressToCloud(cvData, cvName);
         }
-    }, [debouncedCvData, cvName, pageState, mode, cvData, cvId, saveProgressToCloud]); // <-- FIX: Added saveProgressToCloud to dependencies
+    }, [debouncedCvData, cvName, pageState, mode, cvData, cvId, saveProgressToCloud]); // saveProgressToCloud is now a stable dependency
 
     const generateCvFromUserInput = async () => {
         setIsAiLoading(true);
@@ -392,7 +393,7 @@ const CvBuilder = () => {
                 }
             } else {
                 newCvData[id] = value;
-            C }
+            } // FIX: Removed stray 'C' here
             return newCvData;
         });
     };
@@ -521,5 +522,10 @@ const CvBuilder = () => {
 };
 
 export default function BuildPage() {
-    return <CvBuilder />;
+    return (
+        // FIX: Wrap CvBuilder in a Suspense boundary
+        <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading build page...</div>}>
+            <CvBuilder />
+        </Suspense>
+    );
 }
