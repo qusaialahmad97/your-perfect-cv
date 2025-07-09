@@ -8,10 +8,12 @@ export async function POST(request) {
     const { prompt, temperature = 0.5 } = await request.json();
 
     // 2. Get the secret Gemini API key from server-side environment variables
-    const GEMINI_API_KEY = process.env.VITE_GEMINI_API_KEY; 
+    // FIX: Changed from process.env.VITE_GEMINI_API_KEY to process.env.GEMINI_API_KEY
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
 
     // 3. Validate the input
     if (!GEMINI_API_KEY) {
+      // This error will now only be thrown if the variable is genuinely missing from Vercel's config
       throw new Error('API key not configured on the server.');
     }
     if (!prompt) {
