@@ -23,7 +23,7 @@ const HomePage = () => {
         </p>
         {/* --- FIX IS HERE --- */}
         <Link 
-          href="/registration" 
+          href="/register" 
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105"
         >
           Get Started for Free
@@ -80,7 +80,7 @@ const HomePage = () => {
         </p>
         {/* --- FIX IS HERE --- */}
         <Link 
-          href="/registration" 
+          href="/register" 
           className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105"
         >
           Create My CV Now
