@@ -1,7 +1,7 @@
 // src/app/build/page.js
-"use client"; // This is correctly marked as a Client Component
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react'; // Import useCallback and Suspense
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,7 @@ import ConfirmationModal from '@/components/common/ConfirmationModal';
 import AiCvEditor from '@/components/cv/AiCvEditor';
 import ManualCvForm from '@/components/cv/ManualCvForm';
 import PrintableCv from '@/components/cv/PrintableCv';
+import TemplateSelector from '@/components/cv/TemplateSelector'; // Import the new component
 
 const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>;
 
@@ -130,39 +131,130 @@ const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primary
 };
 
 const CvBuilder = () => {
-    const getInitialCvData = () => ({
-        personalInformation: { name: '', email: '', phone: '', linkedin: '', city: '', country: '', portfolioLink: '', contact: '' },
-        summary: '', 
-        experience: [], 
-        education: [], 
-        projects: [],
-        skills: { technical: '', soft: '', languages: '' },
-        references: [],
-        awards: [],
-        courses: [],
-        certifications: [],
-        customSections: [],
-        settings: {
+    // Define your templates
+    const cvTemplates = [
+        {
+            id: 'modern',
+            name: 'Modern Minimalist',
+            imageUrl: '/images/templates/modern.png', // Placeholder image
+            defaultSettings: {
+                primaryColor: '#007BFF', // Blue
+                dividerColor: '#e0e0e0',
+                fontSize: '11pt',
+                lineHeight: '1.4',
+                fontFamily: 'Inter, sans-serif'
+            }
+        },
+        {
+            id: 'classic',
+            name: 'Classic Professional',
+            imageUrl: '/images/templates/classic.png', // Placeholder image
+            defaultSettings: {
+                primaryColor: '#333333', // Dark Gray
+                dividerColor: '#cccccc',
+                fontSize: '10.5pt',
+                lineHeight: '1.5',
+                fontFamily: 'Merriweather, serif' // More traditional font
+            }
+        },
+        {
+            id: 'elegant',
+            name: 'Elegant Serenity',
+            imageUrl: '/images/templates/elegant.png', // Placeholder image
+            defaultSettings: {
+                primaryColor: '#8E44AD', // Purple
+                dividerColor: '#d8bfd8',
+                fontSize: '11pt',
+                lineHeight: '1.4',
+                fontFamily: 'Open Sans, sans-serif'
+            }
+        },
+        {
+            id: 'bold',
+            name: 'Bold & Impactful',
+            imageUrl: '/images/templates/professional.png', // Placeholder image
+            defaultSettings: {
+                primaryColor: '#D9534F', // Red
+                dividerColor: '#f2dede',
+                fontSize: '12pt',
+                lineHeight: '1.3',
+                fontFamily: 'Montserrat, sans-serif'
+            }
+        },
+        {
+            id: 'creative',
+            name: 'Creative Flair',
+            imageUrl: '/images/templates/creative.png', // Placeholder image
+            defaultSettings: {
+                primaryColor: '#28A745', // Green
+                dividerColor: '#d4edda',
+                fontSize: '10pt',
+                lineHeight: '1.6',
+                fontFamily: 'Lato, sans-serif'
+            }
+        },
+        {
+            id: 'minimalist',
+            name: 'Clean & Simple',
+            imageUrl: '/images/templates/minimalist.png', // Placeholder image
+            defaultSettings: {
+                primaryColor: '#6C757D', // Muted Gray
+                dividerColor: '#e9ecef',
+                fontSize: '11.5pt',
+                lineHeight: '1.45',
+                fontFamily: 'Roboto, sans-serif'
+            }
+        }
+    ];
+
+    const getInitialCvData = (templateId = null) => {
+        let initialSettings = {
             primaryColor: '#2563EB',
             dividerColor: '#e0e0e0',
             fontSize: '11pt',
-            lineHeight: '1.4'
-        },
-        aiHelpers: {
-            targetRole: '', 
-            jobDescription: '', 
-            referencesRaw: '',
-            awardsRaw: '',
-            coursesRaw: '',
-            certificationsRaw: '',
-            customSectionsRaw: ''
-        },
-    });
+            lineHeight: '1.4',
+            fontFamily: 'Inter, sans-serif',
+            templateId: templateId || 'modern' // Default to 'modern' if no templateId provided
+        };
+
+        if (templateId) {
+            const selectedTemplate = cvTemplates.find(t => t.id === templateId);
+            if (selectedTemplate) {
+                initialSettings = { ...initialSettings, ...selectedTemplate.defaultSettings, templateId: templateId };
+            }
+        }
+
+        return {
+            personalInformation: { name: '', email: '', phone: '', linkedin: '', city: '', country: '', portfolioLink: '', contact: '' },
+            summary: '', 
+            experience: [], 
+            education: [], 
+            projects: [],
+            skills: { technical: '', soft: '', languages: '' },
+            references: [],
+            awards: [],
+            courses: [],
+            certifications: [],
+            customSections: [],
+            settings: initialSettings,
+            aiHelpers: {
+                targetRole: '', 
+                jobDescription: '', 
+                referencesRaw: '',
+                awardsRaw: '',
+                coursesRaw: '',
+                certificationsRaw: '',
+                customSectionsRaw: ''
+            },
+        };
+    };
 
     const [cvData, setCvData] = useState(null);
     const [cvId, setCvId] = useState(null);
     const [cvName, setCvName] = useState("Untitled CV");
-    const [mode, setMode] = useState(null);
+    const [mode, setMode] = useState(null); // 'manual', 'ai'
+    const [aiFlowStep, setAiFlowStep] = useState(null); // 'templateSelection', 'questionnaire', 'editor'
+
     const [isAiGenerated, setIsAiGenerated] = useState(false);
     
     // Primary color derived from cvData.settings
@@ -178,9 +270,9 @@ const CvBuilder = () => {
     const { user, loading } = useAuth();
     const componentToPrintRef = useRef(null);
 
-    // FIX: Changed to `content` function for robustness
+    // FIX: Reverted to contentRef: componentToPrintRef
     const handlePrint = useReactToPrint({
-        contentRef: componentToPrintRef,
+        contentRef: componentToPrintRef, // CORRECTED THIS LINE BACK TO contentRef
         documentTitle: `${cvName.replace(/\s/g, '_') || 'My_CV'}`,
         onPrintError: (error) => console.error("Error printing:", error),
         pageStyle: `
@@ -198,7 +290,8 @@ const CvBuilder = () => {
     });
 
     const fillWithSampleData = () => {
-        setCvData({
+        setCvData(prev => ({
+            ...prev, // Keep existing settings/template
             personalInformation: { 
                 name: 'Qusai Ahmad', 
                 email: 'qusai.ahmad@email.com', 
@@ -236,13 +329,7 @@ const CvBuilder = () => {
             courses: [],
             certifications: [],
             customSections: [],
-            settings: {
-                primaryColor: '#4CAF50',
-                dividerColor: '#A5D6A7',
-                fontSize: '10.5pt',
-                lineHeight: '1.6'
-            }
-        });
+        }));
     };
 
     useEffect(() => {
@@ -266,9 +353,10 @@ const CvBuilder = () => {
                 const newId = `cv_${Date.now()}`;
                 setCvId(newId);
                 setCvName("Untitled CV");
-                setCvData(getInitialCvData());
-                setMode(null);
+                setCvData(getInitialCvData()); // Initialize with default settings, 'modern' template
+                setMode(null); // Let user choose mode first
                 setIsAiGenerated(false);
+                setAiFlowStep(null); // Reset AI flow step
                 setPageState('READY');
             } else {
                 try {
@@ -280,10 +368,27 @@ const CvBuilder = () => {
                         if (specificCv) {
                             setCvId(specificCv.id);
                             setCvName(specificCv.name);
-                            setCvData({ ...getInitialCvData(), ...specificCv.cvData });
+                            // Merge existing data with initial, applying the saved template settings if available
+                            const templateIdFromSaved = specificCv.cvData?.settings?.templateId;
+                            setCvData({ 
+                                ...getInitialCvData(templateIdFromSaved), // Ensure base structure and apply saved template defaults
+                                ...specificCv.cvData, // Override with specific saved data
+                                settings: { // Ensure settings merge correctly, saved settings take precedence
+                                    ...getInitialCvData(templateIdFromSaved).settings,
+                                    ...specificCv.cvData?.settings
+                                }
+                            });
                             const creationMethod = specificCv.creationMethod || 'manual';
                             setMode(creationMethod);
                             setIsAiGenerated(creationMethod === 'ai');
+                            // If it's an AI-generated CV, set AI flow to editor directly
+                            if (creationMethod === 'ai' && specificCv.cvData) {
+                                setAiFlowStep('editor');
+                            } else if (creationMethod === 'ai') { // If it's AI but not generated yet (e.g., partial save)
+                                setAiFlowStep('templateSelection'); // Or questionnaire, depending on your desired resume point
+                            } else {
+                                setAiFlowStep(null);
+                            }
                             setPageState('READY');
                         } else {
                             setErrorMessage("CV not found.");
@@ -307,12 +412,16 @@ const CvBuilder = () => {
     const saveProgressToCloud = useCallback(async (dataToSave, nameOfCv) => {
         if (!user || !cvId) { return; }
         try {
-            const { aiHelpers, ...cvDataToSave } = dataToSave;
+            // aiHelpers are for AI input, not saved as part of the public CV data
+            const { aiHelpers, ...cvDataToSave } = dataToSave; 
             const userDocRef = doc(db, 'users', String(user.id));
             const userDocSnap = await getDoc(userDocRef);
             const existingCvs = userDocSnap.exists() ? userDocSnap.data().cvs || [] : [];
             const cvIndex = existingCvs.findIndex(cv => cv.id === cvId);
+            // If the CV is new, creationMethod will be 'ai' if we came from AI flow, otherwise 'manual'
+            // If existing, retain its creationMethod
             const creationMethod = cvIndex > -1 ? existingCvs[cvIndex].creationMethod : mode;
+            
             const newCvPayload = { 
                 id: cvId, 
                 name: nameOfCv, 
@@ -368,8 +477,9 @@ const CvBuilder = () => {
                 customSections: parsedJson.customSections || [],
             };
             setCvData(updatedCvData);
-            setMode('ai');
-            setIsAiGenerated(true);
+            setMode('ai'); // Ensure mode is 'ai'
+            setIsAiGenerated(true); // Mark as AI-generated
+            setAiFlowStep('editor'); // Move to the editor view
         } catch (error) {
             setErrorMessage(`Error generating CV: ${error.message}`);
         }
@@ -378,9 +488,10 @@ const CvBuilder = () => {
         }
     };
 
-    const handleChange = (e, dataKey, index) => {
+    const handleChange = useCallback((e, dataKey, index) => {
         const { id, value } = e.target;
         setCvData(prev => {
+            if (!prev) return prev; // Defensive check
             const newCvData = JSON.parse(JSON.stringify(prev));
             if (dataKey) {
                 if (typeof index === 'number') {
@@ -393,17 +504,42 @@ const CvBuilder = () => {
                 }
             } else {
                 newCvData[id] = value;
-            } // FIX: Removed stray 'C' here
+            }
             return newCvData;
         });
-    };
+    }, []); // Empty dependency array means this function is stable
+
+    const handleSettingsChange = useCallback((id, value) => {
+        setCvData(prev => ({
+            ...prev,
+            settings: {
+                ...prev.settings,
+                [id]: value
+            }
+        }));
+    }, []);
+
+    const handleTemplateSelection = useCallback((templateId) => {
+        const selectedTemplate = cvTemplates.find(t => t.id === templateId);
+        if (selectedTemplate) {
+            setCvData(prev => ({
+                ...prev,
+                settings: {
+                    ...prev.settings,
+                    ...selectedTemplate.defaultSettings,
+                    templateId: templateId
+                }
+            }));
+        }
+    }, [cvTemplates]);
 
     const handleStartOver = () => {
         setPageState('LOADING');
-        setCvData(getInitialCvData());
+        setCvData(getInitialCvData()); // Reset to default initial state
         setIsAiGenerated(false);
         setShowStartOverConfirm(false);
-        setMode(null);
+        setMode(null); // Go back to mode selection
+        setAiFlowStep(null); // Reset AI flow
         setPageState('READY');
     };
 
@@ -431,7 +567,7 @@ const CvBuilder = () => {
                                     <p className="text-gray-500">A simple, single-page form to build your CV.</p>
                                 </div>
                                 <div 
-                                    onClick={() => setMode('ai')} 
+                                    onClick={() => { setMode('ai'); setAiFlowStep('templateSelection'); }} // Start AI flow with template selection
                                     className="flex-1 p-8 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-all"
                                 >
                                     <h2 className="text-2xl font-bold mb-2 text-blue-600">Premium AI Builder</h2>
@@ -442,21 +578,40 @@ const CvBuilder = () => {
                     );
                 }
                 if (mode === 'ai') {
-                    return isAiGenerated ? (
-                        <AiCvEditor 
-                            cvData={cvData} 
-                            setCvData={setCvData} 
-                        />
-                    ) : (
-                        <AIQuestionnaire
-                            cvData={cvData}
-                            generateCvFromUserInput={generateCvFromUserInput}
-                            isAiLoading={isAiLoading}
-                            primaryColor={primaryColor}
-                            handleChange={handleChange}
-                            fillWithSampleData={fillWithSampleData}
-                        />
-                    );
+                    if (aiFlowStep === 'templateSelection') {
+                        return (
+                            <TemplateSelector
+                                templates={cvTemplates}
+                                selectedTemplateId={cvData.settings.templateId}
+                                onSelectTemplate={handleTemplateSelection}
+                                onNext={() => setAiFlowStep('questionnaire')}
+                                primaryColor={primaryColor}
+                                setPrimaryColor={(value) => handleSettingsChange('primaryColor', value)}
+                                setDividerColor={(value) => handleSettingsChange('dividerColor', value)}
+                                setFontSize={(value) => handleSettingsChange('fontSize', value)}
+                                setLineHeight={(value) => handleSettingsChange('lineHeight', value)}
+                                setFontFamily={(value) => handleSettingsChange('fontFamily', value)}
+                            />
+                        );
+                    } else if (aiFlowStep === 'questionnaire') {
+                        return (
+                            <AIQuestionnaire
+                                cvData={cvData}
+                                generateCvFromUserInput={generateCvFromUserInput}
+                                isAiLoading={isAiLoading}
+                                primaryColor={primaryColor}
+                                handleChange={handleChange}
+                                fillWithSampleData={fillWithSampleData}
+                            />
+                        );
+                    } else if (aiFlowStep === 'editor') {
+                        return (
+                            <AiCvEditor 
+                                cvData={cvData} 
+                                setCvData={setCvData} 
+                            />
+                        );
+                    }
                 }
                 if (mode === 'manual') {
                     return <ManualCvForm cvData={cvData} setCvData={setCvData} />;
@@ -469,7 +624,7 @@ const CvBuilder = () => {
 
     return (
         <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
-            {pageState === 'READY' && cvData && mode === 'ai' && isAiGenerated && (
+            {pageState === 'READY' && cvData && (mode === 'ai' && isAiGenerated || mode === 'manual') && (
                 <div className="max-w-7xl mx-auto mb-6 flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-xl shadow-lg border border-gray-200">
                     <input 
                         type="text" 
@@ -523,7 +678,6 @@ const CvBuilder = () => {
 
 export default function BuildPage() {
     return (
-        // FIX: Wrap CvBuilder in a Suspense boundary
         <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading build page...</div>}>
             <CvBuilder />
         </Suspense>

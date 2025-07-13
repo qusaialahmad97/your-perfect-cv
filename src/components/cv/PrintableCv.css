@@ -1,4 +1,9 @@
-/* PrintableCv.css - Optimized for Print/Preview Consistency */
+/* src/components/cv/PrintableCv.css - Optimized for Print/Preview Consistency */
+
+/* Import Google Fonts - IMPORTANT: Add these at the very top of your CSS file */
+/* This ensures fonts are loaded for both browser preview and PDF generation */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=Montserrat:wght@400;700&family=Open+Sans:wght@400;700&family=Roboto:wght@400;700&display=swap');
+
 
 /* Base styles for both screen and print */
 .cv-container {
@@ -7,9 +12,11 @@
   min-height: 29.7cm;
   margin: 0 auto;
   color: #333;
-  font-family: Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
+  /* Base font family, overridden by template settings */
+  font-family: Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif; 
   box-sizing: border-box;
   position: relative;
+  padding: 2cm; /* Default padding for all templates unless overridden */
 }
 
 /* Ensure all elements inherit box-sizing */
@@ -134,6 +141,229 @@
   color: #6b7280;
 }
 
+/* --- Template-Specific Overrides --- */
+
+/* Modern Minimalist Template */
+.cv-container.template-modern .cv-header {
+  text-align: left;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--primary-color);
+}
+.cv-container.template-modern .cv-header h1 {
+  font-size: 24pt;
+  color: var(--primary-color);
+}
+.cv-container.template-modern .contact-info,
+.cv-container.template-modern .location {
+  font-size: 10pt;
+  color: #555;
+}
+.cv-container.template-modern .cv-section h2 {
+  font-size: 16pt;
+  border-bottom: 1px dashed var(--divider-color);
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.5rem;
+}
+.cv-container.template-modern .section-divider {
+  display: none; /* Hide the default divider */
+}
+.cv-container.template-modern .bullet-list {
+  list-style-type: square; /* Change bullet type */
+  margin-left: 1rem;
+}
+
+/* Classic Professional Template */
+.cv-container.template-classic .cv-header {
+  text-align: center;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 1rem;
+}
+.cv-container.template-classic .cv-header h1 {
+  font-size: 20pt;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.cv-container.template-classic .contact-info {
+  font-weight: bold;
+  margin-top: 0.5rem;
+}
+.cv-container.template-classic .cv-section h2 {
+  text-align: center;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.4rem 0;
+  margin-bottom: 1rem;
+  font-size: 13pt;
+  border-radius: 3px;
+}
+.cv-container.template-classic .section-divider {
+  display: none;
+}
+.cv-container.template-classic .entry-header {
+  font-style: italic;
+}
+
+
+/* Elegant Serenity Template */
+.cv-container.template-elegant .cv-header {
+    text-align: right;
+    border-bottom: none;
+}
+.cv-container.template-elegant .cv-header h1 {
+    font-size: 26pt;
+    color: #444;
+}
+.cv-container.template-elegant .contact-info,
+.cv-container.template-elegant .location {
+    font-size: 10pt;
+}
+.cv-container.template-elegant .cv-section h2 {
+    font-size: 18pt;
+    font-weight: normal;
+    border-left: 5px solid var(--primary-color);
+    padding-left: 10px;
+    margin-bottom: 1rem;
+}
+.cv-container.template-elegant .section-divider {
+    height: 0.5px; /* Thinner divider */
+    margin: 0.5rem 0 1.5rem 0;
+}
+.cv-container.template-elegant .bullet-list {
+    list-style-type: circle;
+    padding-left: 1.5rem;
+}
+
+/* Bold & Impactful Template */
+.cv-container.template-bold .cv-header {
+    text-align: center;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 1.5rem 0;
+    margin-bottom: 2rem;
+}
+.cv-container.template-bold .cv-header h1 {
+    color: white;
+    font-size: 30pt;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+.cv-container.template-bold .contact-info,
+.cv-container.template-bold .location,
+.cv-container.template-bold .portfolio-link {
+    color: rgba(255, 255, 255, 0.8);
+}
+.cv-container.template-bold .cv-section h2 {
+    text-align: left;
+    font-size: 15pt;
+    border-bottom: 3px solid var(--primary-color);
+    padding-bottom: 5px;
+    margin-bottom: 1rem;
+}
+.cv-container.template-bold .section-divider {
+    display: none;
+}
+.cv-container.template-bold .entry-header h3 {
+    color: #222;
+    font-size: 13pt;
+}
+.cv-container.template-bold .duration,
+.cv-container.template-bold .date,
+.cv-container.template-bold .tech {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+
+/* Creative Flair Template */
+.cv-container.template-creative {
+    padding: 1.5cm 2.5cm; /* More horizontal padding */
+}
+.cv-container.template-creative .cv-header {
+    text-align: center;
+    background-color: #f8f8f8; /* Light background */
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 1.5rem;
+}
+.cv-container.template-creative .cv-header h1 {
+    color: var(--primary-color);
+    font-size: 28pt;
+}
+.cv-container.template-creative .cv-section h2 {
+    color: #555; /* Muted color */
+    font-size: 17pt;
+    margin-bottom: 0.5rem;
+}
+.cv-container.template-creative .section-divider {
+    height: 2px;
+    width: 50px; /* Shorter divider */
+    margin: 0.5rem 0 1.5rem 0;
+    border-radius: 2px;
+}
+.cv-container.template-creative .bullet-list {
+    list-style-type: none; /* No default bullet */
+    padding-left: 0;
+}
+.cv-container.template-creative .bullet-list li:before {
+    content: "✦"; /* Custom bullet */
+    color: var(--primary-color);
+    display: inline-block;
+    width: 1em;
+    margin-left: -1em;
+}
+
+/* Clean & Simple Template */
+.cv-container.template-minimalist .cv-header {
+    text-align: center;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: none;
+}
+.cv-container.template-minimalist .cv-header h1 {
+    font-size: 20pt;
+    color: #333;
+}
+.cv-container.template-minimalist .contact-info,
+.cv-container.template-minimalist .location,
+.cv-container.template-minimalist .portfolio-link {
+    font-size: 10pt;
+    color: #666;
+}
+.cv-container.template-minimalist .cv-section h2 {
+    font-size: 15pt;
+    font-weight: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #444;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0.5rem;
+}
+.cv-container.template-minimalist .section-divider {
+    height: 1px;
+    background-color: #f0f0f0; /* Very light divider */
+    margin: 0.5rem 0 1rem 0;
+}
+.cv-container.template-minimalist .entry {
+    margin-bottom: 0.75rem;
+}
+.cv-container.template-minimalist .entry-header h3 {
+    font-size: 11.5pt;
+    font-weight: 600;
+}
+.cv-container.template-minimalist .duration,
+.cv-container.template-minimalist .date,
+.cv-container.template-minimalist .tech {
+    font-size: 10.5pt;
+    color: #777;
+}
+.cv-container.template-minimalist .bullet-list {
+    list-style-type: disc;
+    padding-left: 1rem;
+    font-size: 10.5pt;
+}
+
+
 /* Print-specific adjustments */
 @media print {
   @page {
@@ -145,6 +375,7 @@
     background: white;
     margin: 0;
     padding: 0;
+    /* Forces browser to print background colors and images */
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -153,10 +384,11 @@
     width: 100%;
     min-height: 100%;
     margin: 0;
-    padding: 0;
+    padding: 0; /* Remove padding for print margin */
     box-shadow: none;
     border: none;
-    font-family: Calibri, Arial, sans-serif;
+    /* Ensure font-family for print is controlled by the component's inline style */
+    /* font-family: Calibri, Arial, sans-serif; */ /* REMOVED: let inline style control this */
   }
 
   /* Force colors in print */
@@ -168,6 +400,15 @@
   .section-divider {
     background-color: var(--divider-color) !important;
   }
+  
+  /* For templates with background colors, ensure they print */
+  .cv-container.template-bold .cv-header {
+      background-color: var(--primary-color) !important;
+  }
+  .cv-container.template-classic .cv-section h2 {
+      background-color: var(--primary-color) !important;
+  }
+
 
   /* Link handling */
   a {
@@ -189,8 +430,9 @@
 /* Screen-specific adjustments */
 @media screen {
   .cv-container {
-    padding: 2cm;
+    /* padding: 2cm;  Moved to base .cv-container for default */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     margin: 2rem auto;
   }
 }
+

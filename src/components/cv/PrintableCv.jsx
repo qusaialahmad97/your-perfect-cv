@@ -1,3 +1,4 @@
+// src/components/cv/PrintableCv.jsx
 import React, { forwardRef } from 'react';
 import './PrintableCv.css'; // Your CSS file
 
@@ -54,18 +55,20 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
     education = [],
     skills = {},
     projects = [],
-    references = [], // New section
-    awards = [],       // New section
-    courses = [],      // New section
-    certifications = [], // New section
-    customSections = [] // New section
+    references = [],
+    awards = [],
+    courses = [],
+    certifications = [],
+    customSections = []
   } = data;
 
   // Use settings for dynamic styles, fallback to propPrimaryColor then a hardcoded default
   const effectivePrimaryColor = settings.primaryColor || propPrimaryColor || '#2563EB';
   const effectiveDividerColor = settings.dividerColor || '#e0e0e0';
   const effectiveFontSize = settings.fontSize || '11pt';
-  const effectiveLineHeight = settings.lineHeight || '1.4'; // Matches your original CSS line-height
+  const effectiveLineHeight = settings.lineHeight || '1.4';
+  const effectiveFontFamily = settings.fontFamily || 'Inter, sans-serif';
+  const effectiveTemplateId = settings.templateId || 'modern'; // Get the template ID
 
   // --- FIX FOR formatContact (Option A) ---
   const formatContact = () => {
@@ -74,13 +77,9 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
     if (personalInformation.phone) parts.push(personalInformation.phone);
     if (personalInformation.linkedin) parts.push(personalInformation.linkedin);
 
-    // If individual fields are populated, prioritize them.
     if (parts.length > 0) {
       return parts.join(' | ');
     }
-
-    // Fallback to the AI-generated 'contact' string if individual fields are empty.
-    // This avoids the recursive call that caused the "Maximum call stack size exceeded" error.
     return personalInformation.contact || '';
   };
   // --- END FIX ---
@@ -95,10 +94,12 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
   return (
     <div
       ref={ref}
-      className="cv-container printable-content"
+      // Add the template-specific class name here
+      className={`cv-container printable-content template-${effectiveTemplateId}`}
       style={{
         fontSize: effectiveFontSize,
         lineHeight: effectiveLineHeight,
+        fontFamily: effectiveFontFamily,
         '--primary-color': effectivePrimaryColor,
         '--divider-color': effectiveDividerColor
       }}
@@ -228,7 +229,7 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
       {/* References */}
       {references.length > 0 && (
         <Section title="References" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-          <ul className="bullet-list"> {/* Using bullet-list for consistent styling */}
+          <ul className="bullet-list">
             {references.map((refItem, i) => (
               <li key={i}>
                 {refItem.name && <p className="font-semibold">{refItem.name}</p>}
@@ -237,7 +238,6 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
               </li>
             ))}
           </ul>
-          {/* Add a common disclaimer for references if desired */}
           <p className="mt-2 text-xs text-gray-600">References available upon request.</p>
         </Section>
       )}

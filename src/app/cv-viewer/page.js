@@ -1,16 +1,14 @@
 // src/app/cv-viewer/page.js
-"use client"; // This component correctly marks itself as a Client Component
+"use client";
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-// FIX: Corrected import path for AuthContext
-import { useAuth } from '@/contexts/AuthContext'; // <--- CHANGED THIS LINE
+import { useAuth } from '@/contexts/AuthContext';
 import PrintableCv from '@/components/cv/PrintableCv';
 import Link from 'next/link';
 
-// Placeholder for loading state while the main component loads
 const CvViewerLoading = () => (
   <div className="flex justify-center items-center h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -26,6 +24,7 @@ const CvViewerPageContent = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const componentToPrintRef = useRef(null);
 
+  // Define initial settings for loading, which can be overridden by saved data
   const getInitialCvData = () => ({
     personalInformation: { name: '', email: '', phone: '', linkedin: '', city: '', country: '', portfolioLink: '', contact: '' },
     summary: '', 
@@ -42,7 +41,9 @@ const CvViewerPageContent = () => {
         primaryColor: '#2563EB',
         dividerColor: '#e0e0e0',
         fontSize: '11pt',
-        lineHeight: '1.4'
+        lineHeight: '1.4',
+        fontFamily: 'Inter, sans-serif', // Added fontFamily
+        templateId: 'modern' // Added templateId
     },
     aiHelpers: {
         targetRole: '', 
@@ -80,7 +81,15 @@ const CvViewerPageContent = () => {
           const specificCv = allCvs.find(cv => cv.id === cvIdFromUrl);
           if (specificCv) {
             setCvName(specificCv.name);
-            setCvData({ ...getInitialCvData(), ...specificCv.cvData }); // Merge with initial to ensure all keys exist
+            // Merge with initial to ensure all keys exist, but saved data takes precedence
+            setCvData({ 
+                ...getInitialCvData(), 
+                ...specificCv.cvData,
+                settings: { // Deep merge settings
+                    ...getInitialCvData().settings,
+                    ...specificCv.cvData?.settings
+                }
+            });
           } else {
             setErrorMessage("CV not found.");
           }
@@ -93,7 +102,7 @@ const CvViewerPageContent = () => {
       }
     };
     loadCv();
-  }, [user, loading, searchParams]); // searchParams is now a valid dependency here because it's wrapped in Suspense
+  }, [user, loading, searchParams]);
 
   // Determine primary color from cvData or fallback
   const primaryColor = cvData?.settings?.primaryColor || '#2563EB';
@@ -111,7 +120,7 @@ const CvViewerPageContent = () => {
   }
 
   if (!cvData) {
-    return <CvViewerLoading />; // Show a loading spinner while data is fetched
+    return <CvViewerLoading />;
   }
 
   return (
@@ -137,7 +146,7 @@ const CvViewerPageContent = () => {
       <main className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-200">
         {cvData ? (
           <PrintableCv 
-            ref={componentToPrintRef} // This ref is for printing, not direct rendering in the browser
+            ref={componentToPrintRef} 
             data={cvData} 
             primaryColor={primaryColor} 
             settings={cvData.settings} 
@@ -150,7 +159,6 @@ const CvViewerPageContent = () => {
   );
 };
 
-// This is the actual Page component, which wraps the content in Suspense
 export default function CvViewerPage() {
   return (
     <Suspense fallback={<CvViewerLoading />}>
