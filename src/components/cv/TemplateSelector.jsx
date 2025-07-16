@@ -6,15 +6,15 @@ const TemplateSelector = ({
     selectedTemplateId,
     onSelectTemplate,
     onNext,
-    primaryColor, // Passed from CvBuilder for button styling
-    setFontFamily, // Callback to update font in cvData
-    setFontSize, // Callback to update font size in cvData
-    setLineHeight, // Callback to update line height in cvData
-    setPrimaryColor, // Callback to update primary color in cvData
-    setDividerColor // Callback to update divider color in cvData
+    primaryColor,
+    setFontFamily,
+    setFontSize,
+    setLineHeight,
+    setPrimaryColor,
+    setDividerColor
 }) => {
     return (
-        <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-4xl mx-auto border border-gray-200">
+        <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-7xl mx-auto border border-gray-200">
             <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">Choose Your CV Template</h2>
             <p className="text-gray-600 text-center mb-8">Select a template to define the visual style of your CV. You can adjust colors and fonts later.</p>
 
@@ -24,7 +24,7 @@ const TemplateSelector = ({
                     <input
                         type="color"
                         id="primaryColor"
-                        value={primaryColor} // Reflects current CV primary color
+                        value={primaryColor}
                         onChange={(e) => setPrimaryColor(e.target.value)}
                         className="w-16 h-16 rounded-full border-2 cursor-pointer shadow-md"
                     />
@@ -33,7 +33,7 @@ const TemplateSelector = ({
                     <label htmlFor="fontFamily" className="block text-sm font-medium text-gray-700 mb-2">Font Family:</label>
                     <select
                         id="fontFamily"
-                        value={templates.find(t => t.id === selectedTemplateId)?.defaultSettings?.fontFamily || 'Inter'} // Use the font from selected template
+                        value={templates.find(t => t.id === selectedTemplateId)?.defaultSettings?.fontFamily || 'Inter'}
                         onChange={(e) => setFontFamily(e.target.value)}
                         className="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 rounded-md shadow-sm"
                     >
@@ -62,7 +62,15 @@ const TemplateSelector = ({
                         onClick={() => onSelectTemplate(t.id)}
                     >
                         <h3 className="text-xl font-semibold mb-3">{t.name}</h3>
-                        <img src={t.imageUrl} alt={t.name} className="w-full h-48 object-cover rounded-md mb-4 shadow-sm" />
+                        {/* MODIFIED THE IMG TAG HERE */}
+                        <img
+                            src={t.imageUrl}
+                            alt={t.name}
+                            // Removed 'w-full' and 'h-48' Tailwind classes
+                            className="object-cover rounded-md mb-4 shadow-sm"
+                            // Added inline style for specific dimensions
+                            style={{ width: '300px', height: '424px' }}
+                        />
                         <button
                             className={`mt-2 py-2 px-4 rounded-md text-sm font-medium ${
                                 selectedTemplateId === t.id ? 'text-white' : 'bg-gray-200 text-gray-700'

@@ -138,7 +138,7 @@ const CvBuilder = () => {
         {
             id: 'modern',
             name: 'Modern Minimalist',
-            imageUrl: '/images/templates/modern.png', // Placeholder image
+            imageUrl: '/images/templates/modern.jpg', // Placeholder image
             defaultSettings: {
                 primaryColor: '#007BFF', // Blue
                 dividerColor: '#e0e0e0',
@@ -151,7 +151,7 @@ const CvBuilder = () => {
         {
             id: 'classic',
             name: 'Classic Professional',
-            imageUrl: '/images/templates/classic.png', // Placeholder image
+            imageUrl: '/images/templates/classic.jpg', // Placeholder image
             defaultSettings: {
                 primaryColor: '#333333', // Dark Gray
                 dividerColor: '#cccccc',
@@ -164,7 +164,7 @@ const CvBuilder = () => {
         {
             id: 'elegant',
             name: 'Elegant Serenity',
-            imageUrl: '/images/templates/elegant.png', // Placeholder image
+            imageUrl: '/images/templates/elegant.jpg', // Placeholder image
             defaultSettings: {
                 primaryColor: '#8E44AD', // Purple
                 dividerColor: '#d8bfd8',
@@ -177,7 +177,7 @@ const CvBuilder = () => {
         {
             id: 'bold',
             name: 'Bold & Impactful',
-            imageUrl: '/images/templates/professional.png', // Placeholder image
+            imageUrl: '/images/templates/professional.jpg', // Placeholder image
             defaultSettings: {
                 primaryColor: '#D9534F', // Red
                 dividerColor: '#f2dede',
@@ -190,7 +190,7 @@ const CvBuilder = () => {
         {
             id: 'creative',
             name: 'Creative Flair',
-            imageUrl: '/images/templates/creative.png', // Placeholder image
+            imageUrl: '/images/templates/creative.jpg', // Placeholder image
             defaultSettings: {
                 primaryColor: '#28A745', // Green
                 dividerColor: '#d4edda',
@@ -203,7 +203,7 @@ const CvBuilder = () => {
         {
             id: 'minimalist',
             name: 'Clean & Simple',
-            imageUrl: '/images/templates/minimalist.png', // Placeholder image
+            imageUrl: '/images/templates/minimalist.jpg', // Placeholder image
             defaultSettings: {
                 primaryColor: '#6C757D', // Muted Gray
                 dividerColor: '#e9ecef',
@@ -293,7 +293,7 @@ const CvBuilder = () => {
     const componentToPrintRef = useRef(null);
 
     const handlePrint = useReactToPrint({
-        content: () => componentToPrintRef.current,
+        contentRef: componentToPrintRef, // CORRECTED THIS LINE BACK TO contentRef
         documentTitle: `${cvName.replace(/\s/g, '_') || 'My_CV'}`,
         onPrintError: (error) => console.error("Error printing:", error),
         pageStyle: `
