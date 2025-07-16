@@ -3,7 +3,6 @@ import React, { forwardRef } from 'react';
 import './PrintableCv.css'; // Your CSS file
 
 // Reusable Section Component for consistent styling and dividers
-// This component now takes primaryColor and dividerColor directly for its own styling
 const Section = ({ title, children, primaryColor, dividerColor }) => (
   <section className="cv-section">
     <h2 style={{ color: 'var(--primary-color)' }}>{title}</h2>
@@ -19,11 +18,10 @@ const Section = ({ title, children, primaryColor, dividerColor }) => (
 const BulletList = ({ content }) => {
   if (!content) return null;
 
-  // Split by newline, filter empty lines, and remove common bullet prefixes if any
   const items = String(content)
     .split('\n')
     .filter(line => line.trim() !== '')
-    .map(line => line.replace(/^[-•*]\s*/, '').trim()); // Added '*' to catch more bullet types
+    .map(line => line.replace(/^[-•*]\s*/, '').trim());
 
   if (items.length === 0) return null;
 
@@ -38,7 +36,6 @@ const BulletList = ({ content }) => {
 
 // Main PrintableCv component, wrapped with forwardRef
 const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings = {} }, ref) => {
-  // Defensive check if data is null (e.g., during initial load)
   if (!data) {
     return (
       <div ref={ref} className="cv-container printable-content">
@@ -47,14 +44,14 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
     );
   }
 
-  // Destructure CV data with default empty objects/arrays to prevent errors
   const {
     personalInformation = {},
     summary = '',
     experience = [],
     education = [],
-    skills = {},
-    projects = [],
+    skills = {}, // Skills no longer contain languages
+    languages = '', // NEW: languages as a top-level property
+    projects = [], 
     references = [],
     awards = [],
     courses = [],
@@ -65,12 +62,27 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
   // Use settings for dynamic styles, fallback to propPrimaryColor then a hardcoded default
   const effectivePrimaryColor = settings.primaryColor || propPrimaryColor || '#2563EB';
   const effectiveDividerColor = settings.dividerColor || '#e0e0e0';
-  const effectiveFontSize = settings.fontSize || '11pt';
+  const effectiveParagraphFontSize = settings.paragraphFontSize || '11pt'; // NEW
+  const effectiveHeaderFontSize = settings.headerFontSize || '14pt';     // NEW
   const effectiveLineHeight = settings.lineHeight || '1.4';
   const effectiveFontFamily = settings.fontFamily || 'Inter, sans-serif';
-  const effectiveTemplateId = settings.templateId || 'modern'; // Get the template ID
+  const effectiveTemplateId = settings.templateId || 'modern';
 
-  // --- FIX FOR formatContact (Option A) ---
+  // Define the order of sections for printing. Use settings.sectionOrder if available.
+  const effectiveSectionOrder = settings.sectionOrder || [
+    'summary',
+    'experience',
+    'education',
+    'projects', 
+    'skills',
+    'languages', // NEW: Languages in default print order
+    'references',
+    'awards',
+    'courses',
+    'certifications',
+    'customSections'
+  ];
+
   const formatContact = () => {
     const parts = [];
     if (personalInformation.email) parts.push(personalInformation.email);
@@ -82,7 +94,6 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
     }
     return personalInformation.contact || '';
   };
-  // --- END FIX ---
 
   const formatLocation = () => {
     const parts = [];
@@ -91,22 +102,209 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
     return parts.join(', ');
   };
 
+  // Helper function to render a specific section
+  const renderSectionContent = (sectionId) => {
+    switch (sectionId) {
+      case 'summary':
+        return summary && (
+          <Section title="Professional Summary" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+            <p className="summary-text">{summary}</p>
+          </Section>
+        );
+      case 'experience':
+        return experience.length > 0 && (
+          <Section title="Work Experience" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+            {experience.map((exp, i) => (
+              <div key={i} className="entry">
+                <div className="entry-header">
+                  <h3>
+                    {exp.jobTitle || exp.title}
+                    {exp.company && ` at ${exp.company}`}
+                  </h3>
+                  {(exp.duration || exp.startDate || exp.endDate) && (
+                    <span className="duration">
+                      {exp.duration || `${exp.startDate || ''} - ${exp.endDate || 'Present'}`}
+                    </span>
+                  )}
+                </div>
+                {(exp.responsibilities || exp.description) && (
+                  <>
+                    <h4>Responsibilities:</h4>
+                    <BulletList content={exp.responsibilities || exp.description} />
+                  </>
+                )}
+                {exp.achievements && (
+                  <>
+                    <h4>Achievements:</h4>
+                    <BulletList content={exp.achievements} />
+                  </>
+                )}
+              </div>
+            ))}
+          </Section>
+        );
+      case 'education':
+        return education.length > 0 && (
+          <Section title="Education" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+            {education.map((edu, i) => (
+              <div key={i} className="entry">
+                <div className="entry-header">
+                  <h3>
+                    {edu.degree}
+                    {edu.institution && ` - ${edu.institution}`}
+                    {!edu.institution && edu.university && ` - ${edu.university}`}
+                  </h3>
+                  {(edu.gradDate || edu.year) && (
+                    <span className="date">
+                      {edu.gradDate || edu.year}
+                    </span>
+                  )}
+                </div>
+                {edu.gpa && <p className="gpa">GPA: {edu.gpa}</p>}
+                {edu.field && <p className="field-of-study">{edu.field}</p>}
+              </div>
+            ))}
+          </Section>
+        );
+      case 'projects':
+        return projects.length > 0 && (
+          <Section title="Projects" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+            {projects.map((project, i) => (
+              <div key={i} className="entry">
+                <div className="entry-header">
+                  <h3>{project.name}</h3>
+                  {project.technologies && <span className="tech">{project.technologies}</span>}
+                </div>
+                {project.description && <BulletList content={project.description} />}
+              </div>
+            ))}
+          </Section>
+        );
+      case 'skills':
+        return (skills.technical || skills.soft) && ( // MODIFIED: no languages here
+          <Section title="Skills" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+            {skills.technical && (
+              <div className="skills-group">
+                <strong>Technical:</strong> {skills.technical}
+              </div>
+            )}
+            {skills.soft && (
+              <div className="skills-group">
+                <strong>Soft:</strong> {skills.soft}
+              </div>
+            )}
+          </Section>
+        );
+      case 'languages': // NEW: Languages section
+        return languages && (
+          <Section title="Languages" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+            <p className="languages-text">{languages}</p>
+          </Section>
+        );
+      case 'references':
+        return references.length > 0 && (
+          <Section title="References" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+            <ul className="bullet-list">
+              {references.map((refItem, i) => (
+                <li key={i}>
+                  {refItem.name && <p className="font-semibold">{refItem.name}</p>}
+                  {refItem.position && <p className="text-sm text-gray-700">{refItem.position}</p>}
+                  {refItem.phone && <p className="text-sm text-gray-700">Phone: {refItem.phone}</p>}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-gray-600">References available upon request.</p>
+          </Section>
+        );
+      case 'awards':
+        return awards.length > 0 && (
+          <Section title="Awards & Recognitions" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+            <ul className="bullet-list">
+              {awards.map((item, i) => (
+                <li key={i}>
+                  <p className="font-semibold">{item.title}</p>
+                  {(item.year || item.issuer) && (
+                      <span className="text-sm text-gray-700">
+                          {item.issuer && <span>{item.issuer}</span>}
+                          {item.year && <span> ({item.year})</span>}
+                      </span>
+                  )}
+                  {item.description && <p className="text-sm">{item.description}</p>}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        );
+      case 'courses':
+        return courses.length > 0 && (
+          <Section title="Courses" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+            <ul className="bullet-list">
+              {courses.map((item, i) => (
+                <li key={i}>
+                  <p className="font-semibold">{item.title}</p>
+                  {(item.institution || item.year) && (
+                      <span className="text-sm text-gray-700">
+                          {item.institution && <span> - {item.institution}</span>}
+                          {item.year && <span> ({item.year})</span>}
+                      </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        );
+      case 'certifications':
+        return certifications.length > 0 && (
+          <Section title="Certifications" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+            <ul className="bullet-list">
+              {certifications.map((item, i) => (
+                <li key={i}>
+                  <p className="font-semibold">{item.title}</p>
+                  {(item.issuingBody || item.year) && (
+                      <span className="text-sm text-gray-700">
+                          {item.issuingBody && <span> - {item.issuingBody}</span>}
+                          {item.year && <span> ({item.year})</span>}
+                      </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        );
+      case 'customSections':
+        return customSections.length > 0 && (
+          <>
+            {customSections.map((item, i) => (
+              <Section key={i} title={item.header || "Custom Section"} primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+                <p>{item.content}</p>
+              </Section>
+            ))}
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div
       ref={ref}
-      // Add the template-specific class name here
       className={`cv-container printable-content template-${effectiveTemplateId}`}
       style={{
-        fontSize: effectiveFontSize,
+        // NEW CSS Variables for font sizes
+        '--paragraph-font-size': effectiveParagraphFontSize,
+        '--header-font-size': effectiveHeaderFontSize,
+        // Existing variables
         lineHeight: effectiveLineHeight,
         fontFamily: effectiveFontFamily,
         '--primary-color': effectivePrimaryColor,
         '--divider-color': effectiveDividerColor
       }}
     >
-      {/* Header */}
+      {/* Header - always fixed at the top */}
       <header className="cv-header">
         <h1>{personalInformation.name || 'Your Name'}</h1>
+        {personalInformation.professionalTitle && <p className="professional-title">{personalInformation.professionalTitle}</p>}
         {formatContact() && <p className="contact-info">{formatContact()}</p>}
         {formatLocation() && <p className="location">{formatLocation()}</p>}
         {personalInformation.portfolioLink && (
@@ -125,191 +323,12 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
         )}
       </header>
 
-      {/* Professional Summary */}
-      {summary && (
-        <Section title="Professional Summary" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-          <p className="summary-text">{summary}</p>
-        </Section>
-      )}
-
-      {/* Work Experience */}
-      {experience.length > 0 && (
-        <Section title="Work Experience" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-          {experience.map((exp, i) => (
-            <div key={i} className="entry">
-              <div className="entry-header">
-                <h3>
-                  {exp.jobTitle || exp.title}
-                  {exp.company && ` at ${exp.company}`}
-                </h3>
-                {(exp.duration || exp.startDate || exp.endDate) && (
-                  <span className="duration">
-                    {exp.duration || `${exp.startDate || ''} - ${exp.endDate || 'Present'}`}
-                  </span>
-                )}
-              </div>
-              {(exp.responsibilities || exp.description) && (
-                <>
-                  <h4>Responsibilities:</h4>
-                  <BulletList content={exp.responsibilities || exp.description} />
-                </>
-              )}
-              {exp.achievements && (
-                <>
-                  <h4>Achievements:</h4>
-                  <BulletList content={exp.achievements} />
-                </>
-              )}
-            </div>
-          ))}
-        </Section>
-      )}
-
-      {/* Education */}
-      {education.length > 0 && (
-        <Section title="Education" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-          {education.map((edu, i) => (
-            <div key={i} className="entry">
-              <div className="entry-header">
-                <h3>
-                  {edu.degree}
-                  {edu.institution && ` - ${edu.institution}`}
-                  {!edu.institution && edu.university && ` - ${edu.university}`} {/* Fallback for university */}
-                </h3>
-                {(edu.gradDate || edu.year) && (
-                  <span className="date">
-                    {edu.gradDate || edu.year}
-                  </span>
-                )}
-              </div>
-              {edu.gpa && <p className="gpa">GPA: {edu.gpa}</p>}
-              {edu.field && <p className="field-of-study">{edu.field}</p>}
-            </div>
-          ))}
-        </Section>
-      )}
-
-      {/* Projects */}
-      {projects.length > 0 && (
-        <Section title="Projects" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-          {projects.map((project, i) => (
-            <div key={i} className="entry">
-              <div className="entry-header">
-                <h3>{project.name}</h3>
-                {project.technologies && <span className="tech">{project.technologies}</span>}
-              </div>
-              {project.description && <BulletList content={project.description} />}
-            </div>
-          ))}
-        </Section>
-      )}
-
-      {/* Skills */}
-      {(skills.technical || skills.soft || skills.languages) && (
-        <Section title="Skills" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-          {skills.technical && (
-            <div className="skills-group">
-              <strong>Technical:</strong> {skills.technical}
-            </div>
-          )}
-          {skills.soft && (
-            <div className="skills-group">
-              <strong>Soft:</strong> {skills.soft}
-            </div>
-          )}
-          {skills.languages && (
-            <div className="skills-group">
-              <strong>Languages:</strong> {skills.languages}
-            </div>
-          )}
-        </Section>
-      )}
-
-      {/* --- NEW SECTIONS --- */}
-      {/* References */}
-      {references.length > 0 && (
-        <Section title="References" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-          <ul className="bullet-list">
-            {references.map((refItem, i) => (
-              <li key={i}>
-                {refItem.name && <p className="font-semibold">{refItem.name}</p>}
-                {refItem.position && <p className="text-sm text-gray-700">{refItem.position}</p>}
-                {refItem.phone && <p className="text-sm text-gray-700">Phone: {refItem.phone}</p>}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-gray-600">References available upon request.</p>
-        </Section>
-      )}
-
-      {/* Awards & Recognitions */}
-      {awards.length > 0 && (
-        <Section title="Awards & Recognitions" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-          <ul className="bullet-list">
-            {awards.map((item, i) => (
-              <li key={i}>
-                <p className="font-semibold">{item.title}</p>
-                {(item.year || item.issuer) && (
-                    <span className="text-sm text-gray-700">
-                        {item.issuer && <span>{item.issuer}</span>}
-                        {item.year && <span> ({item.year})</span>}
-                    </span>
-                )}
-                {item.description && <p className="text-sm">{item.description}</p>}
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
-      {/* Courses */}
-      {courses.length > 0 && (
-        <Section title="Courses" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-          <ul className="bullet-list">
-            {courses.map((item, i) => (
-              <li key={i}>
-                <p className="font-semibold">{item.title}</p>
-                {(item.institution || item.year) && (
-                    <span className="text-sm text-gray-700">
-                        {item.institution && <span> - {item.institution}</span>}
-                        {item.year && <span> ({item.year})</span>}
-                    </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
-      {/* Certifications */}
-      {certifications.length > 0 && (
-        <Section title="Certifications" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-          <ul className="bullet-list">
-            {certifications.map((item, i) => (
-              <li key={i}>
-                <p className="font-semibold">{item.title}</p>
-                {(item.issuingBody || item.year) && (
-                    <span className="text-sm text-gray-700">
-                        {item.issuingBody && <span> - {item.issuingBody}</span>}
-                        {item.year && <span> ({item.year})</span>}
-                    </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
-      {/* Custom Sections */}
-      {customSections.length > 0 && (
-        <>
-          {customSections.map((item, i) => (
-            <Section key={i} title={item.header || "Custom Section"} primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-              <p>{item.content}</p>
-            </Section>
-          ))}
-        </>
-      )}
+      {/* Render sections based on the effectiveSectionOrder */}
+      {effectiveSectionOrder.map(sectionId => (
+        <React.Fragment key={sectionId}>
+          {renderSectionContent(sectionId)}
+        </React.Fragment>
+      ))}
 
     </div>
   );

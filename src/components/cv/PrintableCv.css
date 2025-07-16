@@ -1,25 +1,24 @@
 /* src/components/cv/PrintableCv.css - Optimized for Print/Preview Consistency */
 
 /* Import Google Fonts - IMPORTANT: Add these at the very top of your CSS file */
-/* This ensures fonts are loaded for both browser preview and PDF generation */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=Montserrat:wght@400;700&family=Open+Sans:wght@400;700&family=Roboto:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=Montserrat:wght@400;700&family=Open+Sans:wght@400;700&family=Roboto:wght@400;700&display=swap');
 
 
-/* Base styles for both screen and print */
+/* Base styles for the CV container - applied to both screen preview and print */
 .cv-container {
   background: white;
-  width: 21cm;
-  min-height: 29.7cm;
-  margin: 0 auto;
-  color: #333;
-  /* Base font family, overridden by template settings */
-  font-family: Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif; 
-  box-sizing: border-box;
-  position: relative;
-  padding: 2cm; /* Default padding for all templates unless overridden */
+  width: 21cm; /* Standard A4 width */
+  min-height: 29.7cm; /* Standard A4 height, allows content to push more pages */
+  margin: 0 auto; /* Center on screen */
+  color: #333; /* Default text color */
+  font-family: var(--font-family, 'Inter', sans-serif); /* Uses CSS variable, with fallback */
+  font-size: var(--paragraph-font-size, 11pt); /* NEW: Base font size is now paragraph font size */
+  line-height: var(--line-height, 1.4); /* Uses CSS variable, with fallback */
+  box-sizing: border-box; /* Include padding in element's total width and height */
+  padding: 2cm; /* Default internal padding for all templates */
 }
 
-/* Ensure all elements inherit box-sizing */
+/* Ensure all elements within the container inherit box-sizing for consistency */
 .cv-container * {
   box-sizing: inherit;
 }
@@ -33,20 +32,39 @@
 }
 
 .cv-header h1 {
-  font-size: 22pt;
+  /* Scale h1 relative to header font size. Adjust multiplier (1.8) as needed. */
+  font-size: calc(var(--header-font-size, 14pt) * 1.8);
   font-weight: bold;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.2rem 0; 
   color: #111;
+  line-height: 1.2;
 }
 
-.contact-info, .location, .portfolio-link {
-  font-size: 11pt;
+/* Professional title style */
+.cv-header .professional-title {
+  /* Scale professional title relative to header font size. Adjust multiplier (1.1) as needed. */
+  font-size: calc(var(--header-font-size, 14pt) * 1.1);
+  font-weight: 500; 
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+  color: #555;
+}
+
+
+.contact-info, .location, .portfolio-link,
+.gpa, .field-of-study, .languages-text { /* Added languages-text here */
+  font-size: var(--paragraph-font-size, 11pt); /* Uses paragraph font size */
   margin: 0.25rem 0;
+  line-height: 1.3;
 }
 
 .portfolio-link {
   color: var(--primary-color, #2563eb);
   text-decoration: none;
+}
+
+.portfolio-link:hover {
+  text-decoration: underline;
 }
 
 /* Section styles */
@@ -56,7 +74,7 @@
 }
 
 .cv-section h2 {
-  font-size: 14pt;
+  font-size: var(--header-font-size, 14pt); /* Uses header font size directly */
   font-weight: bold;
   color: var(--primary-color, #2563eb);
   padding-bottom: 0.25rem;
@@ -70,10 +88,14 @@
   background-color: var(--divider-color, #e0e0e0);
 }
 
-/* Entry styles */
+/* Entry styles (for experience, education, etc.) */
 .entry {
   margin-bottom: 1rem;
   page-break-inside: avoid;
+}
+
+.entry:last-child {
+  margin-bottom: 0;
 }
 
 .entry-header {
@@ -84,18 +106,29 @@
 }
 
 .entry-header h3 {
-  font-size: 12pt;
+  /* Scale h3 relative to paragraph font size. Adjust multiplier (1.1) as needed. */
+  font-size: calc(var(--paragraph-font-size, 11pt) * 1.1);
   font-weight: bold;
   margin: 0;
+  line-height: 1.2;
 }
 
 .duration, .date, .tech {
-  font-size: 11pt;
+  font-size: var(--paragraph-font-size, 11pt); /* Uses paragraph font size */
   font-style: italic;
   color: #555;
+  white-space: nowrap;
 }
 
-/* List styles */
+/* Section-specific H4 for Achievements/Responsibilities headings */
+.cv-section .entry h4 {
+  font-size: var(--paragraph-font-size, 11pt); /* Uses paragraph font size */
+  font-weight: bold;
+  margin-top: 0.5em;
+  margin-bottom: 0.2em;
+}
+
+/* List styles (e.g., responsibilities, achievements) */
 .bullet-list {
   padding-left: 1.25rem;
   margin: 0.5rem 0;
@@ -103,43 +136,30 @@
 }
 
 .bullet-list li {
+  font-size: var(--paragraph-font-size, 11pt); /* Uses paragraph font size */
   margin-bottom: 0.25rem;
 }
 
-/* Skills styles */
+.bullet-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* Skills group styles */
 .skills-group {
   margin-bottom: 0.5rem;
 }
 
 .skills-group strong {
   font-weight: bold;
+  color: #444;
 }
 
 /* Utility styles */
 .summary-text {
+  font-size: var(--paragraph-font-size, 11pt); /* Uses paragraph font size */
   margin: 0.5rem 0;
 }
 
-.gpa, .field-of-study {
-  font-size: 10pt;
-  color: #666;
-  margin: 0.25rem 0;
-}
-
-/* Tailwind-like utility classes */
-.font-semibold {
-  font-weight: 600;
-}
-
-.text-sm {
-  font-size: 0.875em;
-  color: #4b5563;
-}
-
-.text-xs {
-  font-size: 0.75em;
-  color: #6b7280;
-}
 
 /* --- Template-Specific Overrides --- */
 
@@ -151,25 +171,32 @@
   border-bottom: 2px solid var(--primary-color);
 }
 .cv-container.template-modern .cv-header h1 {
-  font-size: 24pt;
+  font-size: calc(var(--header-font-size, 14pt) * 1.7); /* Adjusted multiplier */
   color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cv-container.template-modern .cv-header .professional-title {
+  font-size: calc(var(--paragraph-font-size, 11pt) * 1.1); /* Relative to paragraph for this template */
+  font-weight: normal;
+  color: #555;
 }
 .cv-container.template-modern .contact-info,
 .cv-container.template-modern .location {
-  font-size: 10pt;
+  font-size: var(--paragraph-font-size, 11pt); /* Ensure this uses paragraph size */
   color: #555;
 }
 .cv-container.template-modern .cv-section h2 {
-  font-size: 16pt;
+  font-size: calc(var(--header-font-size, 14pt) * 1.1); /* Adjusted multiplier */
   border-bottom: 1px dashed var(--divider-color);
   padding-bottom: 0.2rem;
   margin-bottom: 0.5rem;
 }
 .cv-container.template-modern .section-divider {
-  display: none; /* Hide the default divider */
+  display: none;
 }
 .cv-container.template-modern .bullet-list {
-  list-style-type: square; /* Change bullet type */
+  list-style-type: square;
   margin-left: 1rem;
 }
 
@@ -180,21 +207,27 @@
   padding-bottom: 1rem;
 }
 .cv-container.template-classic .cv-header h1 {
-  font-size: 20pt;
+  font-size: calc(var(--header-font-size, 14pt) * 1.4); /* Adjusted multiplier */
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+.cv-container.template-classic .cv-header .professional-title {
+  font-size: calc(var(--paragraph-font-size, 11pt) * 1.2); /* Relative to paragraph for this template */
+  font-style: italic;
+  color: #666;
+  margin-bottom: 0.5rem;
 }
 .cv-container.template-classic .contact-info {
   font-weight: bold;
   margin-top: 0.5rem;
 }
 .cv-container.template-classic .cv-section h2 {
+  font-size: var(--header-font-size, 14pt); /* Direct use of header font size */
   text-align: center;
   background-color: var(--primary-color);
   color: white;
   padding: 0.4rem 0;
   margin-bottom: 1rem;
-  font-size: 13pt;
   border-radius: 3px;
 }
 .cv-container.template-classic .section-divider {
@@ -211,22 +244,27 @@
     border-bottom: none;
 }
 .cv-container.template-elegant .cv-header h1 {
-    font-size: 26pt;
+    font-size: calc(var(--header-font-size, 14pt) * 1.8); /* Adjusted multiplier */
     color: #444;
+}
+.cv-container.template-elegant .cv-header .professional-title {
+    font-size: calc(var(--header-font-size, 14pt) * 1.1); /* Relative to header font size for this template */
+    font-weight: 400;
+    color: #777;
 }
 .cv-container.template-elegant .contact-info,
 .cv-container.template-elegant .location {
-    font-size: 10pt;
+    font-size: var(--paragraph-font-size, 11pt);
 }
 .cv-container.template-elegant .cv-section h2 {
-    font-size: 18pt;
+    font-size: calc(var(--header-font-size, 14pt) * 1.2); /* Adjusted multiplier */
     font-weight: normal;
     border-left: 5px solid var(--primary-color);
     padding-left: 10px;
     margin-bottom: 1rem;
 }
 .cv-container.template-elegant .section-divider {
-    height: 0.5px; /* Thinner divider */
+    height: 0.5px;
     margin: 0.5rem 0 1.5rem 0;
 }
 .cv-container.template-elegant .bullet-list {
@@ -244,8 +282,14 @@
 }
 .cv-container.template-bold .cv-header h1 {
     color: white;
-    font-size: 30pt;
+    font-size: calc(var(--header-font-size, 14pt) * 2); /* Adjusted multiplier */
     text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+.cv-container.template-bold .cv-header .professional-title {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: calc(var(--header-font-size, 14pt) * 1.15); /* Relative to header font size for this template */
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
 .cv-container.template-bold .contact-info,
 .cv-container.template-bold .location,
@@ -253,8 +297,8 @@
     color: rgba(255, 255, 255, 0.8);
 }
 .cv-container.template-bold .cv-section h2 {
+    font-size: calc(var(--header-font-size, 14pt) * 1.05); /* Adjusted multiplier */
     text-align: left;
-    font-size: 15pt;
     border-bottom: 3px solid var(--primary-color);
     padding-bottom: 5px;
     margin-bottom: 1rem;
@@ -263,8 +307,8 @@
     display: none;
 }
 .cv-container.template-bold .entry-header h3 {
+    font-size: calc(var(--paragraph-font-size, 11pt) * 1.1); /* Relative to paragraph for this template */
     color: #222;
-    font-size: 13pt;
 }
 .cv-container.template-bold .duration,
 .cv-container.template-bold .date,
@@ -276,36 +320,42 @@
 
 /* Creative Flair Template */
 .cv-container.template-creative {
-    padding: 1.5cm 2.5cm; /* More horizontal padding */
+    padding: 1.5cm 2.5cm;
 }
 .cv-container.template-creative .cv-header {
     text-align: center;
-    background-color: #f8f8f8; /* Light background */
+    background-color: #f8f8f8;
     padding: 1rem;
     border-radius: 5px;
     margin-bottom: 1.5rem;
+    border-bottom: none;
 }
 .cv-container.template-creative .cv-header h1 {
     color: var(--primary-color);
-    font-size: 28pt;
+    font-size: calc(var(--header-font-size, 14pt) * 1.9); /* Adjusted multiplier */
+}
+.cv-container.template-creative .cv-header .professional-title {
+    font-size: calc(var(--header-font-size, 14pt) * 1.0); /* Relative to header font size for this template */
+    color: #444;
+    font-weight: 500;
 }
 .cv-container.template-creative .cv-section h2 {
-    color: #555; /* Muted color */
-    font-size: 17pt;
+    font-size: calc(var(--header-font-size, 14pt) * 1.15); /* Adjusted multiplier */
+    color: #555;
     margin-bottom: 0.5rem;
 }
 .cv-container.template-creative .section-divider {
     height: 2px;
-    width: 50px; /* Shorter divider */
+    width: 50px;
     margin: 0.5rem 0 1.5rem 0;
     border-radius: 2px;
 }
 .cv-container.template-creative .bullet-list {
-    list-style-type: none; /* No default bullet */
+    list-style-type: none;
     padding-left: 0;
 }
 .cv-container.template-creative .bullet-list li:before {
-    content: "✦"; /* Custom bullet */
+    content: "✦";
     color: var(--primary-color);
     display: inline-block;
     width: 1em;
@@ -320,17 +370,21 @@
     border-bottom: none;
 }
 .cv-container.template-minimalist .cv-header h1 {
-    font-size: 20pt;
+    font-size: calc(var(--header-font-size, 14pt) * 1.4); /* Adjusted multiplier */
     color: #333;
+}
+.cv-container.template-minimalist .cv-header .professional-title {
+    font-size: calc(var(--paragraph-font-size, 11pt) * 1.1); /* Relative to paragraph for this template */
+    font-weight: 400;
+    color: #666;
 }
 .cv-container.template-minimalist .contact-info,
 .cv-container.template-minimalist .location,
 .cv-container.template-minimalist .portfolio-link {
-    font-size: 10pt;
-    color: #666;
+    font-size: var(--paragraph-font-size, 11pt);
 }
 .cv-container.template-minimalist .cv-section h2 {
-    font-size: 15pt;
+    font-size: calc(var(--header-font-size, 14pt) * 1.05); /* Adjusted multiplier */
     font-weight: normal;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -341,26 +395,26 @@
 }
 .cv-container.template-minimalist .section-divider {
     height: 1px;
-    background-color: #f0f0f0; /* Very light divider */
+    background-color: #f0f0f0;
     margin: 0.5rem 0 1rem 0;
 }
 .cv-container.template-minimalist .entry {
     margin-bottom: 0.75rem;
 }
 .cv-container.template-minimalist .entry-header h3 {
-    font-size: 11.5pt;
+    font-size: calc(var(--paragraph-font-size, 11pt) * 1.05); /* Relative to paragraph for this template */
     font-weight: 600;
 }
 .cv-container.template-minimalist .duration,
 .cv-container.template-minimalist .date,
 .cv-container.template-minimalist .tech {
-    font-size: 10.5pt;
+    font-size: var(--paragraph-font-size, 11pt);
     color: #777;
 }
 .cv-container.template-minimalist .bullet-list {
     list-style-type: disc;
     padding-left: 1rem;
-    font-size: 10.5pt;
+    font-size: var(--paragraph-font-size, 11pt);
 }
 
 
@@ -375,7 +429,6 @@
     background: white;
     margin: 0;
     padding: 0;
-    /* Forces browser to print background colors and images */
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -384,14 +437,12 @@
     width: 100%;
     min-height: 100%;
     margin: 0;
-    padding: 0; /* Remove padding for print margin */
+    padding: 0;
     box-shadow: none;
     border: none;
-    /* Ensure font-family for print is controlled by the component's inline style */
-    /* font-family: Calibri, Arial, sans-serif; */ /* REMOVED: let inline style control this */
   }
 
-  /* Force colors in print */
+  /* Force colors to print correctly (important for variable-based colors) */
   .portfolio-link,
   .cv-section h2 {
     color: var(--primary-color) !important;
@@ -401,7 +452,7 @@
     background-color: var(--divider-color) !important;
   }
   
-  /* For templates with background colors, ensure they print */
+  /* For templates with background colors in headers/sections, ensure they print */
   .cv-container.template-bold .cv-header {
       background-color: var(--primary-color) !important;
   }
@@ -410,29 +461,22 @@
   }
 
 
-  /* Link handling */
+  /* Link handling for print */
   a {
     text-decoration: none;
     color: inherit;
   }
 
-  /* Ensure proper spacing */
-  .cv-section {
-    margin-bottom: 1.25rem;
-  }
-
-  /* Prevent unwanted page breaks */
-  .entry, .cv-section {
+  /* Prevent unwanted page breaks within sections and entries */
+  .cv-section, .entry {
     page-break-inside: avoid;
   }
 }
 
-/* Screen-specific adjustments */
+/* Screen-specific adjustments for visual preview */
 @media screen {
   .cv-container {
-    /* padding: 2cm;  Moved to base .cv-container for default */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     margin: 2rem auto;
   }
 }
-
