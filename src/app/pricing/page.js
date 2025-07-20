@@ -2,74 +2,93 @@
 
 "use client";
 
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react'; // Import useEffect for logging
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AuthContext } from '@/contexts/AuthContext';
+import usePaddle from '@/hooks/usePaddle';
 
 const CheckIcon = () => (
     <svg className="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
 );
 
 const PricingPage = () => {
-    const { user, isAuthenticated } = useContext(AuthContext);
-    const [isLoading, setIsLoading] = useState(false);
+    const { user, isAuthenticated, loading: authLoading } = useContext(AuthContext);
+    const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
     const [billingCycle, setBillingCycle] = useState('monthly');
     const router = useRouter();
+    const { paddle, isPaddleReady } = usePaddle();
+
+    // --- DEBUGGING LOG ---
+    // This will show you how the auth state changes on every render.
+    useEffect(() => {
+        console.log('Auth State on Render:', {
+            authLoading,
+            isAuthenticated,
+            user: user ? { email: user.email, id: user.id } : null,
+            isPaddleReady
+        });
+    }, [authLoading, isAuthenticated, user, isPaddleReady]);
 
     const plans = {
-        monthly: {
-            pro: { priceId: 'pri_01jyyapwta3majwvc2ezgfbqg5', price: 7 },
-        },
-        yearly: {
-            pro: { priceId: 'pri_01jyyar1w1y9m3xqzj3gqd1fve', price: 49 },
-        },
-        oneTime: {
-            ats: { priceId: 'pri_01jyyas2y7hvm4s997w6c0pvk3', price: 5 },
-        }
+        monthly: { pro: { priceId: 'pri_01jyyapwta3majwvc2ezgfbqg5', price: 7 } },
+        yearly: { pro: { priceId: 'pri_01jyyar1w1y9m3xqzj3gqd1fve', price: 49 } },
+        oneTime: { ats: { priceId: 'pri_01jyyas2y7hvm4s997w6c0pvk3', price: 5 } }
     };
 
     const handleCheckout = (tier) => {
-        // --- THIS IS THE FIX ---
-        // We now check for both isAuthenticated AND the existence of the user object.
-        // This prevents the error if the context is still initializing.
+        console.log('--- handleCheckout called ---');
+        console.log('Auth State at time of click:', { authLoading, isAuthenticated, user });
+
+        // --- THE ROBUST FIX ---
+        // We only proceed if authentication is no longer loading.
+        if (authLoading) {
+            console.log('Checkout blocked because auth is still loading.');
+            return; // Exit early if auth state is not yet determined.
+        }
+
+        // Now that we know auth is settled, we can reliably check if the user is authenticated.
         if (!isAuthenticated || !user) {
+            console.log('Redirecting to login because user is not authenticated.');
             router.push('/login?from=/pricing');
             return;
         }
-        // --- END OF FIX ---
 
-        setIsLoading(true);
-        let priceIdToUse;
-        if (tier === 'pro') {
-            priceIdToUse = plans[billingCycle].pro.priceId;
-        } else if (tier === 'ats') {
-            priceIdToUse = plans.oneTime.ats.priceId;
-        }
-
-        if (!priceIdToUse || priceIdToUse.includes('xxx')) {
-            alert('This plan is not configured correctly. Please contact support.');
-            setIsLoading(false);
+        if (!isPaddleReady || !paddle) {
+            alert("Checkout is not quite ready. Please wait a moment and try again.");
             return;
         }
 
+        setIsCheckoutLoading(true);
+        let priceIdToUse;
+        if (tier === 'pro') priceIdToUse = plans[billingCycle].pro.priceId;
+        else if (tier === 'ats') priceIdToUse = plans.oneTime.ats.priceId;
+
         try {
-            console.log(`Attempting to open Paddle Checkout with Price ID: ${priceIdToUse}`);
-            
-            Paddle.Checkout.open({
+            console.log(`Opening Paddle Checkout for user ${user.email} with Price ID: ${priceIdToUse}`);
+            paddle.Checkout.open({
                 items: [{ priceId: priceIdToUse, quantity: 1 }],
-                customer: { email: user.email }, // Now we are certain 'user' exists here
+                customer: { email: user.email },
                 customData: { user_id: user.id },
                 settings: { displayMode: 'overlay' }
             });
-
         } catch (error) {
             console.error("Paddle Checkout Error:", error);
             alert("An error occurred while preparing the checkout.");
         } finally {
-            setTimeout(() => setIsLoading(false), 2000);
+            setTimeout(() => setIsCheckoutLoading(false), 2000);
         }
     };
+    
+    const getButtonText = (baseText) => {
+        if (authLoading) return 'Authenticating...';
+        if (!isPaddleReady) return 'Initializing Payment...';
+        if (isCheckoutLoading) return 'Processing...';
+        return baseText;
+    };
+
+    // The button is disabled until BOTH auth and paddle are ready.
+    const isButtonDisabled = authLoading || !isPaddleReady || isCheckoutLoading;
 
     return (
         <div className="bg-gray-50 py-12">
@@ -123,8 +142,8 @@ const PricingPage = () => {
                             <li className="flex items-start"><CheckIcon /> <span>Real-time Job Matcher</span></li>
                             <li className="flex items-start"><CheckIcon /> <span>Unlimited ATS Score Checks</span></li>
                         </ul>
-                        <button onClick={() => handleCheckout('pro')} disabled={isLoading} className="mt-8 w-full bg-blue-600 text-white py-3 px-6 border border-transparent rounded-md font-semibold hover:bg-blue-700 disabled:opacity-50">
-                            {isLoading ? 'Processing...' : 'Go Pro'}
+                        <button onClick={() => handleCheckout('pro')} disabled={isButtonDisabled} className="mt-8 w-full bg-blue-600 text-white py-3 px-6 border border-transparent rounded-md font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-wait">
+                            {getButtonText('Go Pro')}
                         </button>
                     </div>
 
@@ -140,8 +159,8 @@ const PricingPage = () => {
                             <li className="flex items-start"><CheckIcon /> <span>Use against any 3 job descriptions</span></li>
                             <li className="flex items-start"><CheckIcon /> <span>No subscription required</span></li>
                         </ul>
-                        <button onClick={() => handleCheckout('ats')} disabled={isLoading} className="mt-8 w-full bg-green-500 text-white py-3 px-6 border border-transparent rounded-md font-semibold hover:bg-green-600 disabled:opacity-50">
-                            {isLoading ? 'Processing...' : 'Buy 3 Scans'}
+                        <button onClick={() => handleCheckout('ats')} disabled={isButtonDisabled} className="mt-8 w-full bg-green-500 text-white py-3 px-6 border border-transparent rounded-md font-semibold hover:bg-green-600 disabled:opacity-50 disabled:cursor-wait">
+                            {getButtonText('Buy 3 Scans')}
                         </button>
                     </div>
                 </div>

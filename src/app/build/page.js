@@ -55,12 +55,17 @@ const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primary
     if (cvData) {
         if (currentQuestion.dataKey) {
             if (['experience', 'education'].includes(currentQuestion.dataKey)) {
+                // If it's an array and AI Questionnaire is asking for raw input for the first item
+                // NOTE: The AI Questionnaire will *still* operate on rawInput (plain text)
+                // The conversion to HTML happens when `generateCvFromUserInput` is called.
                 currentValue = cvData[currentQuestion.dataKey]?.[0]?.rawInput || '';
             } else {
+                // Direct property of the dataKey object
                 currentValue = cvData[currentQuestion.dataKey]?.[currentQuestion.id] || '';
             }
         } else {
             // For top-level fields like 'summary', 'languages'
+            // NOTE: Summary in AI Questionnaire is still plain text input
             currentValue = cvData[currentQuestion.id] || '';
         }
     }
@@ -246,14 +251,15 @@ const CvBuilder = () => {
             }
         }
 
+        // Initialize rich text fields with basic HTML paragraphs
         return {
             personalInformation: { name: '', professionalTitle: '', email: '', phone: '', linkedin: '', city: '', country: '', portfolioLink: '', contact: '' },
-            summary: '', 
+            summary: '<p></p>', // Initialize as empty HTML paragraph
             experience: [], 
             education: [], 
             projects: [],
-            skills: { technical: '', soft: '' }, // MODIFIED: removed languages from here
-            languages: '', // NEW: languages as a top-level property
+            skills: { technical: '', soft: '' }, 
+            languages: '', 
             references: [],
             awards: [],
             courses: [],
@@ -293,7 +299,7 @@ const CvBuilder = () => {
     const componentToPrintRef = useRef(null);
 
     const handlePrint = useReactToPrint({
-        contentRef: componentToPrintRef, // CORRECTED THIS LINE BACK TO contentRef
+        contentRef: componentToPrintRef, 
         documentTitle: `${cvName.replace(/\s/g, '_') || 'My_CV'}`,
         onPrintError: (error) => console.error("Error printing:", error),
         pageStyle: `
@@ -324,33 +330,35 @@ const CvBuilder = () => {
                 portfolioLink: 'github.com/q-ahmad',
                 contact: 'qusai.ahmad@email.com | (123) 456-7890 | linkedin.com/in/q-ahmad'
             },
-            summary: 'A Senior QA Automation Engineer with over 7 years of experience specializing in building robust testing frameworks for web and mobile applications.',
+            // **** MODIFIED: SUMMARY WITH HTML TAGS for sample data consistency ****
+            summary: '<p>Highly accomplished Senior QA Automation Engineer with over 7 years of experience specializing in building robust testing frameworks for web and mobile applications. Proven ability to lead teams, optimize CI/CD pipelines, and significantly improve quality and efficiency. Expertise in Cypress, Selenium, Java, and API testing.</p>',
             experience: [{ 
+                // rawInput remains plain text as it's for AI questionnaire
                 rawInput: 'At Innovate Solutions, as a Test Lead, I designed and implemented a new CI/CD testing pipeline using Jenkins and Selenium, which decreased bug detection time by 40%. Leading a team of 5 QA engineers, I improved test coverage by 30% for our flagship product. Collaborated with development teams to integrate testing earlier in the SDLC.' 
             }],
             education: [{ 
                 rawInput: 'B.Sc. in Software Engineering from the Hashemite University, 2019. Courses included Data Structures, Algorithms, Software Testing, Database Systems.' 
             }],
-            projects: [],
+            projects: [], // Projects will be populated/converted by AI or manual input in editor
             skills: { 
                 technical: 'Java, Selenium, Cypress, Appium, SQL, Postman, Jira, Jenkins, GitLab CI/CD, Agile Methodologies, TestRail', 
                 soft: 'Critical Thinking, Communication, Mentorship, Problem-solving, Team Leadership, Adaptability'
-            }, // MODIFIED: removed languages
-            languages: 'English (Fluent), Arabic (Native)', // NEW: top-level languages
+            }, 
+            languages: 'English (Fluent), Arabic (Native)', 
             aiHelpers: { 
                 targetRole: 'Senior QA Automation Engineer', 
                 jobDescription: 'We are seeking a Senior QA Automation Engineer with extensive experience in creating testing frameworks from scratch. Must be proficient in Cypress and/or Selenium, have strong Java skills, and be able to work with CI/CD pipelines like Jenkins. Experience with API testing using Postman is a plus. Candidates should demonstrate strong leadership and problem-solving skills.', 
                 referencesRaw: 'Professor Jane Smith, (555) 123-4567, Head of CS Dept. at Hashemite University; Dr. Alex Chen, (555) 987-6543, Engineering Director at Innovate Solutions.',
                 awardsRaw: 'Innovator of the Year Award (2023), recognized at Tech Solutions Annual Gala for developing a groundbreaking test automation tool. Employee Recognition for Outstanding Performance (Q4 2022), Innovate Solutions, for significant contributions to project success.',
                 coursesRaw: 'Advanced Selenium WebDriver (Udemy, 2022); Certified ScrumMaster (Scrum Alliance, 2021); API Testing with Postman (LinkedIn Learning, 2020).',
-                certificationsRaw: 'ISTQB Advanced Level Test Automation Engineer (2021); Certified Kubernetes Administrator (CKA, 2020).',
-                customSectionsRaw: 'Volunteer Work: Led weekly coding workshops for underprivileged youth (2020-2023), Code for Good Foundation, impacting over 100 students. Publications: Co-authored "Effective Strategies for CI/CD in Agile QA," presented at Global Tech Conference 2023.'
+                certificationsRaw: 'AWS Certified Solutions Architect (2023); PMP (2021).',
+                customSectionsRaw: 'Volunteer Work: Mentored junior developers at Code for Good Foundation (2020-2023), impacting over 100 students. Publications: Co-authored "Effective Strategies for CI/CD in Agile QA," presented at Global Tech Conference 2023.'
             },
             references: [],
             awards: [],
             courses: [],
             certifications: [],
-            customSections: [],
+            customSections: [], // These will be populated by AI as HTML
         }));
     };
 
@@ -394,16 +402,52 @@ const CvBuilder = () => {
                             const templateIdFromSaved = specificCv.cvData?.settings?.templateId;
                             const initialCvData = getInitialCvData(templateIdFromSaved);
 
-                            setCvData({ 
+                            const loadedCvData = {
                                 ...initialCvData, 
                                 ...specificCv.cvData, 
-                                // Deep merge for settings to ensure new defaults like sectionOrder are applied
-                                // but existing specific values take precedence.
                                 settings: { 
                                     ...initialCvData.settings,
                                     ...specificCv.cvData?.settings
                                 }
-                            });
+                            };
+                            
+                            // Post-process loaded data to ensure rich text fields are HTML.
+                            // This is a safety measure for old plain text data in Firestore.
+                            const ensureHtml = (text) => {
+                                if (!text) return '<p></p>';
+                                // More robust check for existing HTML: contains a tag, or is an empty paragraph
+                                if ((text.trim().startsWith('<') && text.trim().endsWith('>') && text.includes('/')) || text.trim() === '<p></p>') {
+                                    return text; 
+                                }
+                                // Convert plain text bullet points (e.g., from AI raw input or old data) to HTML lists
+                                if (text.includes('\n- ') || text.includes('\n* ')) {
+                                    const lines = text.split('\n');
+                                    const ulContent = lines.map(line => {
+                                        const trimmed = line.replace(/^[-*]\s*/, '').trim();
+                                        return trimmed ? `<li>${trimmed}</li>` : '';
+                                    }).filter(Boolean).join(''); // Filter out empty li elements
+                                    return ulContent ? `<ul>${ulContent}</ul>` : '<p></p>';
+                                }
+                                return `<p>${text}</p>`; // Wrap plain text in paragraph
+                            };
+
+                            loadedCvData.summary = ensureHtml(loadedCvData.summary);
+                            loadedCvData.experience = (loadedCvData.experience || []).map(exp => ({
+                                ...exp,
+                                responsibilities: ensureHtml(exp.responsibilities),
+                                achievements: ensureHtml(exp.achievements)
+                            }));
+                            loadedCvData.projects = (loadedCvData.projects || []).map(proj => ({
+                                ...proj,
+                                description: ensureHtml(proj.description)
+                            }));
+                             loadedCvData.customSections = (loadedCvData.customSections || []).map(section => ({
+                                ...section,
+                                content: ensureHtml(section.content)
+                            }));
+
+
+                            setCvData(loadedCvData);
                             const creationMethod = specificCv.creationMethod || 'manual';
                             setMode(creationMethod);
                             setIsAiGenerated(creationMethod === 'ai');
@@ -474,11 +518,11 @@ const CvBuilder = () => {
         const { targetRole, jobDescription, referencesRaw, awardsRaw, coursesRaw, certificationsRaw, customSectionsRaw } = cvData.aiHelpers;
         const userInput = {
             personalInformation: { ...cvData.personalInformation, professionalTitle: cvData.personalInformation.professionalTitle },
-            summary: cvData.summary,
-            experienceRaw: cvData.experience[0]?.rawInput, 
-            educationRaw: cvData.education[0]?.rawInput,
+            summary: cvData.summary, // This is HTML from the editor, AI service needs to handle it or expect plain text
+            experienceRaw: cvData.experience[0]?.rawInput, // This is plain text from questionnaire
+            educationRaw: cvData.education[0]?.rawInput, // This is plain text from questionnaire
             skills: cvData.skills, 
-            languages: cvData.languages, // NEW: pass top-level languages
+            languages: cvData.languages, 
             referencesRaw: referencesRaw,
             awardsRaw: awardsRaw,
             coursesRaw: coursesRaw,
@@ -487,6 +531,25 @@ const CvBuilder = () => {
         };
         try {
             const parsedJson = await aiService.generateFullCv(userInput, targetRole, jobDescription);
+            
+            // Post-process AI-generated fields to ensure they are HTML, if AI returns plain text.
+            // IMPORTANT: This `ensureHtml` is crucial for AI output that might be plain text.
+            const ensureHtml = (text) => {
+                if (!text) return '<p></p>';
+                // Check if it's already HTML (simple check)
+                if (text.trim().startsWith('<') && text.trim().endsWith('>') && text.includes('/')) return text;
+                // Convert plain text bullet points (e.g., from AI raw input) to HTML lists
+                if (text.includes('\n- ') || text.includes('\n* ')) {
+                    const lines = text.split('\n');
+                    const ulContent = lines.map(line => {
+                        const trimmed = line.replace(/^[-*]\s*/, '').trim();
+                        return trimmed ? `<li>${trimmed}</li>` : '';
+                    }).filter(Boolean).join('');
+                    return ulContent ? `<ul>${ulContent}</ul>` : '<p></p>';
+                }
+                return `<p>${text}</p>`; // Wrap plain text in paragraph
+            };
+
             const updatedCvData = { 
                 ...cvData, 
                 ...parsedJson, 
@@ -494,13 +557,25 @@ const CvBuilder = () => {
                     ...cvData.personalInformation, 
                     ...parsedJson.personalInformation
                 },
-                // Ensure top-level languages is updated if AI returns it (unlikely for raw input but good for consistency)
+                summary: ensureHtml(parsedJson.summary || cvData.summary), 
+                experience: (parsedJson.experience || []).map(exp => ({
+                    ...exp,
+                    responsibilities: ensureHtml(exp.responsibilities || ''),
+                    achievements: ensureHtml(exp.achievements || '')
+                })),
+                projects: (parsedJson.projects || []).map(proj => ({
+                    ...proj,
+                    description: ensureHtml(proj.description || '')
+                })),
+                customSections: (parsedJson.customSections || []).map(section => ({
+                    ...section,
+                    content: ensureHtml(section.content || '')
+                })),
                 languages: parsedJson.languages || cvData.languages, 
                 references: parsedJson.references || [],
                 awards: parsedJson.awards || [],
                 courses: parsedJson.courses || [],
                 certifications: parsedJson.certifications || [],
-                customSections: parsedJson.customSections || [],
             };
             setCvData(updatedCvData);
             setMode('ai'); 
@@ -651,7 +726,7 @@ const CvBuilder = () => {
     return (
         <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
             {pageState === 'READY' && cvData && (mode === 'ai' && isAiGenerated || mode === 'manual') && (
-                <div className="max-w-7xl mx-auto mb-6 flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-xl shadow-lg border border-gray-200">
+                <div className="mx-auto mb-6 flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-xl shadow-lg border border-gray-200">
                     <input 
                         type="text" 
                         value={cvName} 
@@ -676,7 +751,7 @@ const CvBuilder = () => {
                 </div>
             )}
 
-            <main className="max-w-7xl mx-auto">
+            <main className="mx-auto">
                 {renderContent()}
             </main>
 
