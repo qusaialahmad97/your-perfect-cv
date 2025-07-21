@@ -15,7 +15,6 @@ const Navbar = () => {
   };
 
   const handleProtectedRoute = (path) => {
-
     if (!loading) {
       if (user) {
         router.push(path);
@@ -48,12 +47,20 @@ const Navbar = () => {
               >
                 ATS Checker
               </button>
+              
+              {/* --- ADDITION: Added Contact Link Here --- */}
+              <Link href="/contact" className="text-gray-500 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                Contact
+              </Link>
+              {/* --- END OF ADDITION --- */}
+
               <Link href="/terms-of-service" className="text-gray-500 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                 Terms
               </Link>
               <Link href="/privacy-policy" className="text-gray-500 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                 Privacy
               </Link>
+              
               {!loading && (
                 user ? (
                   <>
