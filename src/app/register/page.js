@@ -1,9 +1,7 @@
-// src/app/register/page.js
-
-"use client"; // This page uses state and event handlers
+"use client";
 
 import React, { useState } from 'react';
-import axios from 'axios'; // Make sure you've run 'npm install axios'
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -13,6 +11,7 @@ const RegisterPage = () => {
     password: '',
   });
   const [message, setMessage] = useState('');
+  const [isError, setIsError] = useState(false); // State to track if the message is an error
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -23,23 +22,20 @@ const RegisterPage = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
+    setIsError(false);
     setIsLoading(true);
 
     try {
-      // --- THIS IS THE CRUCIAL PART ---
-      // Ensure we are using a relative path and the .post() method.
       const apiUrl = '/api/users/register'; 
-      const response = await axios.post(apiUrl, { email, password });
-      // --- END OF CRUCIAL PART ---
-
-      setMessage(response.data.message);
+      await axios.post(apiUrl, { email, password });
       
-      // Redirect to login page after successful registration
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
+      // --- THE CHANGE: Redirect immediately on success ---
+      // The user doesn't need to see the success message here,
+      // the next page will give them instructions.
+      router.push('/auth/verify-email');
 
     } catch (err) {
+      setIsError(true); // Mark the message as an error for styling
       if (err.response && err.response.data && err.response.data.message) {
         setMessage(err.response.data.message);
       } else {
@@ -94,7 +90,8 @@ const RegisterPage = () => {
         </div>
       </form>
       {message && (
-        <p className={`mt-4 text-center text-sm ${message.includes('successfully') ? 'text-green-600' : 'text-red-600'}`}>
+        // Use the isError state to apply the correct color
+        <p className={`mt-4 text-center text-sm ${isError ? 'text-red-600' : 'text-green-600'}`}>
           {message}
         </p>
       )}

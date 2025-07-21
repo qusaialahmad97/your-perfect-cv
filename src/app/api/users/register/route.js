@@ -1,9 +1,11 @@
-// src/app/api/users/register/route.js
-
 import { NextResponse } from 'next/server';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore'; // For saving user profiles
+import { getFirestore } from 'firebase-admin/firestore';
+import { Resend } from 'resend';
+import { VerifyEmailTemplate } from '@/emails/VerifyEmailTemplate';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const serviceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
@@ -19,32 +21,58 @@ export async function POST(request) {
   try {
     const { email, password } = await request.json();
 
-    if (!email || !password) {
-      return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
+    if (!email || !password || password.length < 6) {
+      return NextResponse.json({ message: 'Email and password (min 6 characters) are required.' }, { status: 400 });
     }
 
-    // Use Firebase Admin to create the user in Firebase Authentication
     const userRecord = await getAuth().createUser({
       email: email,
       password: password,
+      emailVerified: false,
     });
 
-    // Also, create a user document in Firestore to store their CVs
-    const db = getFirestore();
-    await db.collection('users').doc(userRecord.uid).set({
+    await getFirestore().collection('users').doc(userRecord.uid).set({
       email: userRecord.email,
       createdAt: new Date().toISOString(),
-      cvs: [] // Start with an empty array for CVs
+      cvs: []
     });
 
-    return NextResponse.json({ message: 'User registered successfully!', uid: userRecord.uid }, { status: 201 });
+    const verificationLink = await getAuth().generateEmailVerificationLink(email);
+
+    // --- ENHANCED EMAIL SENDING BLOCK ---
+    try {
+      console.log(`Attempting to send verification email to ${email}...`);
+      const { data, error } = await resend.emails.send({
+        from: 'welcome@updates.yourperfectcv.com',
+        to: email,
+        subject: 'Verify Your Email for Your Perfect CV',
+        react: <VerifyEmailTemplate email={email} verificationLink={verificationLink} />,
+      });
+
+      // Check for Resend API errors
+      if (error) {
+        console.error('Resend API Error:', error);
+        // We still let the user register, but log the email failure.
+        // In production, you might want to handle this more gracefully.
+      } else {
+        console.log('Resend successfully sent email. ID:', data.id);
+      }
+    } catch (emailError) {
+      console.error('Caught an exception while trying to send email:', emailError);
+    }
+    // --- END OF ENHANCED BLOCK ---
+
+    return NextResponse.json({ 
+      message: 'Registration successful! A verification email has been sent to your inbox.', 
+      uid: userRecord.uid 
+    }, { status: 201 });
 
   } catch (error) {
     let errorMessage = 'An error occurred during registration.';
     if (error.code === 'auth/email-already-exists') {
       errorMessage = 'This email address is already in use.';
     }
-    console.error('Registration Error:', error.message);
-    return NextResponse.json({ message: errorMessage }, { status: 500 });
+    console.error('Firebase Registration Error:', error);
+    return NextResponse.json({ message: errorMessage }, { status: 400 });
   }
 }
