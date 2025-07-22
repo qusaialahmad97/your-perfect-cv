@@ -15,7 +15,7 @@ const HomePage = () => {
       {/* --- Hero Section --- */}
       <section className="w-full bg-gradient-to-br from-blue-100 to-white py-32 px-6 text-center relative overflow-hidden">
         <div className="absolute top-0 left-0 w-40 h-40 bg-blue-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-0 w-60 h-60 bg-green-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-0 w-60 h-60 bg-blue-300 opacity-20 rounded-full blur-3xl animate-pulse"></div>
 
         <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-6 z-10 relative">
           Craft a <span className="text-blue-600">Winning CV</span> <br />with AI Superpowers
@@ -119,14 +119,14 @@ const HomePage = () => {
       </section>
 
       {/* --- Call to Action --- */}
-      <section className="w-full bg-green-600 py-20 px-6 text-center text-white">
+      <section className="w-full bg-blue-600 py-20 px-6 text-center text-white">
         <h2 className="text-4xl md:text-5xl font-bold mb-6">Take the Next Step in Your Career</h2>
         <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8">
           Start building a powerful CV in minutes. It’s free, it’s smart, and it’s built for you.
         </p>
         <Link
           href="/register"
-          className="inline-block bg-white text-green-700 hover:bg-gray-100 font-semibold py-3 px-10 rounded-full text-lg transition-all duration-300 hover:scale-105 shadow-md"
+          className="inline-block bg-white text-blue-700 hover:bg-gray-100 font-semibold py-3 px-10 rounded-full text-lg transition-all duration-300 hover:scale-105 shadow-md"
         >
           Start Building Now
         </Link>
