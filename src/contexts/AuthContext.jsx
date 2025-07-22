@@ -2,9 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth } from '@/firebase';
+import { auth, db } from '@/firebase'; // Import 'db' from your firebase config
+import { doc, onSnapshot } from 'firebase/firestore'; // Import onSnapshot
 
-// Create the context with a default shape for better auto-completion and safety
 export const AuthContext = createContext({
   user: null,
   isAuthenticated: false,
@@ -12,50 +12,59 @@ export const AuthContext = createContext({
   logout: async () => {},
 });
 
-// The custom hook to easily use the context in other components
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
 
-// The Provider component that will wrap your application
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This listener from Firebase handles all auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    // This listener handles Firebase Auth state (logged in / out)
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in
-        setUser({
-          id: firebaseUser.uid,
-
-          email: firebaseUser.email,
-          emailVerified: firebaseUser.emailVerified,
+        // --- CHANGE: If user is logged in, set up a Firestore listener ---
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        
+        // onSnapshot listens for real-time changes to the user document
+        const unsubscribeFirestore = onSnapshot(userRef, (doc) => {
+          if (doc.exists()) {
+            const firestoreData = doc.data();
+            setUser({
+              id: firebaseUser.uid,
+              email: firebaseUser.email,
+              emailVerified: firebaseUser.emailVerified,
+              // Add subscription data to our user object!
+              subscriptionStatus: firestoreData.subscriptionStatus,
+              paddleSubscriptionId: firestoreData.paddleSubscriptionId,
+            });
+          } else {
+            // This case handles if a user exists in Auth but not Firestore
+            setUser(null);
+          }
+          setLoading(false);
         });
+
+        // Return the firestore unsubscriber to clean it up when the user logs out
+        return unsubscribeFirestore;
+
       } else {
         // User is signed out
         setUser(null);
+        setLoading(false);
       }
-      // This is crucial: set loading to false AFTER Firebase has determined the auth state
-      setLoading(false);
     });
 
-    // Cleanup the subscription when the component unmounts
-    return () => unsubscribe();
+    return () => unsubscribeAuth(); // Cleanup auth listener on component unmount
   }, []);
   
   const logout = async () => {
-    setUser(null);
     await firebaseSignOut(auth);
   };
 
-  // The value that will be provided to all consuming components
   const value = {
     user,
     loading,
     logout,
-    // This is a derived value: it's true only when loading is done AND a user exists.
     isAuthenticated: !loading && user !== null,
   };
 

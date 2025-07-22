@@ -1,29 +1,42 @@
-// src/app/ats-checker/page.js
-"use client"; // This page uses state and event handlers and is a Client Component
+"use client";
 
 import React, { useState, useEffect } from 'react';
-// import { getTextFromPdf } from '@/utils/parsePdf'; // <--- DO NOT IMPORT GLOBALLY ANYMORE
+import { useRouter } from 'next/navigation'; // --- IMPORT useRouter ---
+import { useAuth } from '@/contexts/AuthContext'; // --- IMPORT useAuth ---
 import ATSResult from '@/components/ats/ATSResult';
-import { aiService } from '@/services/aiService'; // aiService is likely server-compatible, so keep it direct
+import { aiService } from '@/services/aiService';
 
 const ATSCheckerPage = () => {
+  const { user, loading: authLoading, isAuthenticated } = useAuth(); // Get user and loading state
+  const router = useRouter(); // Initialize the router
+
   const [cvFile, setCvFile] = useState(null);
   const [cvText, setCvText] = useState('');
   const [jobDescription, setJobDescription] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // For local page operations
   const [error, setError] = useState('');
   const [analysisResult, setAnalysisResult] = useState(null);
-
-  // State to hold the dynamically loaded getTextFromPdf function
   const [clientSideGetTextFromPdf, setClientSideGetTextFromPdf] = useState(null);
 
-  // Use useEffect to dynamically import the PDF parser module only on the client
+  // --- NEW: Protection Logic ---
   useEffect(() => {
-    // Ensure this runs only in the browser environment
+    // Wait until the authentication check is complete
+    if (!authLoading) {
+      // Check for multiple failure conditions:
+      // 1. Not authenticated
+      // 2. User object exists but email is not verified
+      // 3. User object exists but subscription is not 'active'
+      if (!isAuthenticated || !user?.emailVerified || user?.subscriptionStatus !== 'active') {
+        router.push('/pricing'); // Redirect non-pro users to the pricing page
+      }
+    }
+  }, [user, authLoading, isAuthenticated, router]);
+  // --- END OF NEW LOGIC ---
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       import('@/utils/parsePdf')
         .then(mod => {
-          // Check if getTextFromPdf exists in the module
           if (mod && mod.getTextFromPdf) {
             setClientSideGetTextFromPdf(() => mod.getTextFromPdf);
           } else {
@@ -36,27 +49,23 @@ const ATSCheckerPage = () => {
           setError("Failed to load PDF processing capabilities. Please try reloading the page.");
         });
     }
-  }, []); // Empty dependency array means this runs once on component mount (client-side)
+  }, []);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    if (!file) return; // Exit if no file selected
-
-    // Ensure the clientSideGetTextFromPdf function is loaded before proceeding
+    if (!file) return;
     if (!clientSideGetTextFromPdf) {
-      setError('PDF processing module is still loading or failed to load. Please wait a moment and try again.');
+      setError('PDF processing module is still loading. Please wait a moment and try again.');
       return;
     }
-
     setCvFile(file);
     setIsLoading(true);
-    setError(''); // Clear previous errors
+    setError('');
     try {
-      // Use the dynamically loaded function to get text from PDF
       const text = await clientSideGetTextFromPdf(file);
       setCvText(text);
     } catch (err) {
-      setError(`Error processing PDF: ${err.message || 'An unknown error occurred during PDF parsing.'}`);
+      setError(`Error processing PDF: ${err.message || 'An unknown error occurred.'}`);
       setCvFile(null);
       setCvText('');
     } finally {
@@ -64,8 +73,8 @@ const ATSCheckerPage = () => {
     }
   };
 
-  // --- REFACTORED TO USE aiService ---
   const handleAnalysis = async () => {
+    // ... (Your existing handleAnalysis function remains unchanged)
     if (!cvText || !jobDescription) {
       setError('Please upload a CV and provide a job description.');
       return;
@@ -97,11 +106,9 @@ const ATSCheckerPage = () => {
     `;
 
     try {
-      // Use the centralized aiService to make the call
-      const responseText = await aiService.callAI(prompt, 0.5); // Using the generic callAI method
-
+      const responseText = await aiService.callAI(prompt, 0.5);
       if (responseText) {
-          const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').replace(/```/g, '').trim(); // Ensure all backticks are removed
+          const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
           try {
             const parsedJson = JSON.parse(cleanedText);
             setAnalysisResult(parsedJson);
@@ -118,8 +125,20 @@ const ATSCheckerPage = () => {
       setIsLoading(false);
     }
   };
-  // --- END OF REFACTOR ---
 
+  // --- NEW: Loading/Unauthorized State ---
+  // Show a loading spinner while we verify the user's subscription.
+  // This prevents the page content from flashing before the redirect.
+  if (authLoading || !user || user.subscriptionStatus !== 'active') {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <p className="ml-4 text-gray-600">Verifying your access...</p>
+      </div>
+    );
+  }
+
+  // --- If all checks pass, render the page content ---
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="text-center mb-10">
@@ -136,7 +155,6 @@ const ATSCheckerPage = () => {
               accept=".pdf"
               onChange={handleFileChange}
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              // Disable file input if the parser is not loaded yet
               disabled={!clientSideGetTextFromPdf} 
             />
             {cvFile && <p className="mt-3 text-sm text-green-600">✅ {cvFile.name} uploaded successfully.</p>}
@@ -155,14 +173,12 @@ const ATSCheckerPage = () => {
         </div>
       ) : null}
 
-      {/* Display general error messages */}
       {error && <div className="mt-6 bg-red-100 text-red-700 p-3 rounded-md" role="alert">{error}</div>}
 
       <div className="mt-8 text-center">
         {!analysisResult ? (
           <button
             onClick={handleAnalysis}
-            // Add condition to disable if PDF parser is not ready
             disabled={isLoading || !cvFile || !jobDescription || !clientSideGetTextFromPdf}
             className="bg-green-600 text-white font-bold py-3 px-12 rounded-lg shadow-md hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >

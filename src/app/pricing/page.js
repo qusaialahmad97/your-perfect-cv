@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useContext, useState, useEffect } from 'react'; // Import useEffect for logging
+import React, { useContext, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AuthContext } from '@/contexts/AuthContext';
@@ -17,10 +17,20 @@ const PricingPage = () => {
     const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
     const [billingCycle, setBillingCycle] = useState('monthly');
     const router = useRouter();
-    const { paddle, isPaddleReady } = usePaddle();
 
-    // --- DEBUGGING LOG ---
-    // This will show you how the auth state changes on every render.
+    // --- CHANGE 1: Define what happens on successful purchase ---
+    const handlePurchaseSuccess = (data) => {
+        console.log('✅ Checkout completed successfully!', data);
+        // After a successful payment, the user has done their part.
+        // We redirect them to the dashboard. The webhook will update their
+        // permissions in the background, and our AuthContext will automatically
+        // reflect the changes, unlocking features.
+        router.push('/dashboard');
+    };
+
+    // --- CHANGE 2: Pass the success handler to the usePaddle hook ---
+    const { paddle, isPaddleReady } = usePaddle({ onCheckoutComplete: handlePurchaseSuccess });
+
     useEffect(() => {
         console.log('Auth State on Render:', {
             authLoading,
@@ -37,23 +47,13 @@ const PricingPage = () => {
     };
 
     const handleCheckout = (tier) => {
-        console.log('--- handleCheckout called ---');
-        console.log('Auth State at time of click:', { authLoading, isAuthenticated, user });
-
-        // --- THE ROBUST FIX ---
-        // We only proceed if authentication is no longer loading.
         if (authLoading) {
-            console.log('Checkout blocked because auth is still loading.');
-            return; // Exit early if auth state is not yet determined.
+            return;
         }
-
-        // Now that we know auth is settled, we can reliably check if the user is authenticated.
         if (!isAuthenticated || !user) {
-            console.log('Redirecting to login because user is not authenticated.');
             router.push('/login?from=/pricing');
             return;
         }
-
         if (!isPaddleReady || !paddle) {
             alert("Checkout is not quite ready. Please wait a moment and try again.");
             return;
@@ -65,7 +65,6 @@ const PricingPage = () => {
         else if (tier === 'ats') priceIdToUse = plans.oneTime.ats.priceId;
 
         try {
-            console.log(`Opening Paddle Checkout for user ${user.email} with Price ID: ${priceIdToUse}`);
             paddle.Checkout.open({
                 items: [{ priceId: priceIdToUse, quantity: 1 }],
                 customer: { email: user.email },
@@ -76,7 +75,8 @@ const PricingPage = () => {
             console.error("Paddle Checkout Error:", error);
             alert("An error occurred while preparing the checkout.");
         } finally {
-            setTimeout(() => setIsCheckoutLoading(false), 2000);
+            // This timeout is a fallback in case the user closes the modal
+            setTimeout(() => setIsCheckoutLoading(false), 3000);
         }
     };
     
@@ -87,7 +87,6 @@ const PricingPage = () => {
         return baseText;
     };
 
-    // The button is disabled until BOTH auth and paddle are ready.
     const isButtonDisabled = authLoading || !isPaddleReady || isCheckoutLoading;
 
     return (

@@ -31,15 +31,21 @@ export async function POST(request) {
       emailVerified: false,
     });
 
+    // --- THIS IS THE EDIT ---
+    // We now add the default subscription fields to the user document in Firestore.
     await getFirestore().collection('users').doc(userRecord.uid).set({
       email: userRecord.email,
       createdAt: new Date().toISOString(),
-      cvs: []
+      cvs: [],
+      // Initialize subscription fields for the new user
+      paddleSubscriptionId: null,
+      subscriptionStatus: 'inactive', // All new users start with an inactive subscription
+      subscriptionPeriodEnd: null,
     });
+    // --- END OF EDIT ---
 
     const verificationLink = await getAuth().generateEmailVerificationLink(email);
 
-    // --- ENHANCED EMAIL SENDING BLOCK ---
     try {
       console.log(`Attempting to send verification email to ${email}...`);
       const { data, error } = await resend.emails.send({
@@ -49,18 +55,14 @@ export async function POST(request) {
         react: <VerifyEmailTemplate email={email} verificationLink={verificationLink} />,
       });
 
-      // Check for Resend API errors
       if (error) {
         console.error('Resend API Error:', error);
-        // We still let the user register, but log the email failure.
-        // In production, you might want to handle this more gracefully.
       } else {
         console.log('Resend successfully sent email. ID:', data.id);
       }
     } catch (emailError) {
       console.error('Caught an exception while trying to send email:', emailError);
     }
-    // --- END OF ENHANCED BLOCK ---
 
     return NextResponse.json({ 
       message: 'Registration successful! A verification email has been sent to your inbox.', 

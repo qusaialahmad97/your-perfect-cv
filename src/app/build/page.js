@@ -1,4 +1,3 @@
-// src/app/build/page.js
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
@@ -36,7 +35,7 @@ const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primary
         { id: 'experience', question: "Tell us about your most relevant job. (Role, Company, Achievements)", placeholder: "e.g., At TechCorp, as a Lead Dev, I designed and implemented a new CI/CD testing pipeline using Jenkins and Selenium, which decreased server costs by 20%...", isTextarea: true, required: true, dataKey: 'experience' },
         { id: 'technical', question: "List your key technical skills.", placeholder: "e.g., Java, Python, React, AWS, Docker", required: true, dataKey: 'skills' },
         { id: 'soft', question: "And what are your most important soft skills?", placeholder: "e.g., Team Leadership, Project Management, Communication", required: true, dataKey: 'skills' },
-        { id: 'languages', question: "Which languages do you speak, and at what level? (e.g., English (Native), Spanish (Conversational))", placeholder: "e.g., English (Native), Spanish (Conversational)", optional: true, dataKey: null }, // MODIFIED: dataKey to null for top-level 'languages'
+        { id: 'languages', question: "Which languages do you speak, and at what level? (e.g., English (Native), Spanish (Conversational))", placeholder: "e.g., English (Native), Spanish (Conversational)", optional: true, dataKey: null },
         { id: 'education', question: "What is your highest educational degree or certification?", placeholder: "e.g., M.Sc. in Computer Science from the University of Technology, 2019", required: true, dataKey: 'education' },
         { id: 'referencesRaw', question: "List any professional references. Include Name, Phone, and Position for each. (Optional)", placeholder: "e.g., John Doe, (123) 456-7890, Senior Manager at Acme Corp.; Jane Smith, (987) 654-3210, CTO at Beta Solutions.", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
         { id: 'awardsRaw', question: "Tell us about any awards or recognitions you've received. (Optional)", placeholder: "e.g., Employee of the Year 2023, Innovator Award 2022", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
@@ -55,17 +54,11 @@ const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primary
     if (cvData) {
         if (currentQuestion.dataKey) {
             if (['experience', 'education'].includes(currentQuestion.dataKey)) {
-                // If it's an array and AI Questionnaire is asking for raw input for the first item
-                // NOTE: The AI Questionnaire will *still* operate on rawInput (plain text)
-                // The conversion to HTML happens when `generateCvFromUserInput` is called.
                 currentValue = cvData[currentQuestion.dataKey]?.[0]?.rawInput || '';
             } else {
-                // Direct property of the dataKey object
                 currentValue = cvData[currentQuestion.dataKey]?.[currentQuestion.id] || '';
             }
         } else {
-            // For top-level fields like 'summary', 'languages'
-            // NOTE: Summary in AI Questionnaire is still plain text input
             currentValue = cvData[currentQuestion.id] || '';
         }
     }
@@ -74,7 +67,7 @@ const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primary
         if (currentQuestion.dataKey === 'experience' || currentQuestion.dataKey === 'education') {
             handleChange({ target: { id: 'rawInput', value: e.target.value } }, currentQuestion.dataKey, 0);
         } else {
-            handleChange(e, currentQuestion.dataKey); // `dataKey` null handles top-level fields
+            handleChange(e, currentQuestion.dataKey);
         }
     };
     
@@ -138,143 +131,31 @@ const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primary
 };
 
 const CvBuilder = () => {
-    // Define your templates
     const cvTemplates = [
-        {
-            id: 'modern',
-            name: 'Modern Minimalist',
-            imageUrl: '/images/templates/modern.jpg', // Placeholder image
-            defaultSettings: {
-                primaryColor: '#007BFF', // Blue
-                dividerColor: '#e0e0e0',
-                paragraphFontSize: '11pt', // MODIFIED
-                headerFontSize: '14pt',     // NEW
-                lineHeight: '1.4',
-                fontFamily: 'Inter, sans-serif'
-            }
-        },
-        {
-            id: 'classic',
-            name: 'Classic Professional',
-            imageUrl: '/images/templates/classic.jpg', // Placeholder image
-            defaultSettings: {
-                primaryColor: '#333333', // Dark Gray
-                dividerColor: '#cccccc',
-                paragraphFontSize: '10.5pt', // MODIFIED
-                headerFontSize: '13.5pt',     // NEW
-                lineHeight: '1.5',
-                fontFamily: 'Merriweather, serif' // More traditional font
-            }
-        },
-        {
-            id: 'elegant',
-            name: 'Elegant Serenity',
-            imageUrl: '/images/templates/elegant.jpg', // Placeholder image
-            defaultSettings: {
-                primaryColor: '#8E44AD', // Purple
-                dividerColor: '#d8bfd8',
-                paragraphFontSize: '11pt', // MODIFIED
-                headerFontSize: '15pt',     // NEW
-                lineHeight: '1.4',
-                fontFamily: 'Open Sans, sans-serif'
-            }
-        },
-        {
-            id: 'bold',
-            name: 'Bold & Impactful',
-            imageUrl: '/images/templates/professional.jpg', // Placeholder image
-            defaultSettings: {
-                primaryColor: '#D9534F', // Red
-                dividerColor: '#f2dede',
-                paragraphFontSize: '12pt', // MODIFIED
-                headerFontSize: '16pt',     // NEW
-                lineHeight: '1.3',
-                fontFamily: 'Montserrat, sans-serif'
-            }
-        },
-        {
-            id: 'creative',
-            name: 'Creative Flair',
-            imageUrl: '/images/templates/creative.jpg', // Placeholder image
-            defaultSettings: {
-                primaryColor: '#28A745', // Green
-                dividerColor: '#d4edda',
-                paragraphFontSize: '10pt', // MODIFIED
-                headerFontSize: '13pt',     // NEW
-                lineHeight: '1.6',
-                fontFamily: 'Lato, sans-serif'
-            }
-        },
-        {
-            id: 'minimalist',
-            name: 'Clean & Simple',
-            imageUrl: '/images/templates/minimalist.jpg', // Placeholder image
-            defaultSettings: {
-                primaryColor: '#6C757D', // Muted Gray
-                dividerColor: '#e9ecef',
-                paragraphFontSize: '11.5pt', // MODIFIED
-                headerFontSize: '14.5pt',     // NEW
-                lineHeight: '1.45',
-                fontFamily: 'Roboto, sans-serif'
-            }
-        }
+        { id: 'modern', name: 'Modern Minimalist', imageUrl: '/images/templates/modern.jpg', defaultSettings: { primaryColor: '#007BFF', dividerColor: '#e0e0e0', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Inter, sans-serif' } },
+        { id: 'classic', name: 'Classic Professional', imageUrl: '/images/templates/classic.jpg', defaultSettings: { primaryColor: '#333333', dividerColor: '#cccccc', paragraphFontSize: '10.5pt', headerFontSize: '13.5pt', lineHeight: '1.5', fontFamily: 'Merriweather, serif' } },
+        { id: 'elegant', name: 'Elegant Serenity', imageUrl: '/images/templates/elegant.jpg', defaultSettings: { primaryColor: '#8E44AD', dividerColor: '#d8bfd8', paragraphFontSize: '11pt', headerFontSize: '15pt', lineHeight: '1.4', fontFamily: 'Open Sans, sans-serif' } },
+        { id: 'bold', name: 'Bold & Impactful', imageUrl: '/images/templates/professional.jpg', defaultSettings: { primaryColor: '#D9534F', dividerColor: '#f2dede', paragraphFontSize: '12pt', headerFontSize: '16pt', lineHeight: '1.3', fontFamily: 'Montserrat, sans-serif' } },
+        { id: 'creative', name: 'Creative Flair', imageUrl: '/images/templates/creative.jpg', defaultSettings: { primaryColor: '#28A745', dividerColor: '#d4edda', paragraphFontSize: '10pt', headerFontSize: '13pt', lineHeight: '1.6', fontFamily: 'Lato, sans-serif' } },
+        { id: 'minimalist', name: 'Clean & Simple', imageUrl: '/images/templates/minimalist.jpg', defaultSettings: { primaryColor: '#6C757D', dividerColor: '#e9ecef', paragraphFontSize: '11.5pt', headerFontSize: '14.5pt', lineHeight: '1.45', fontFamily: 'Roboto, sans-serif' } }
     ];
 
     const getInitialCvData = (templateId = null) => {
         let initialSettings = {
-            primaryColor: '#2563EB',
-            dividerColor: '#e0e0e0',
-            paragraphFontSize: '11pt', // MODIFIED: base paragraph font size
-            headerFontSize: '14pt', // NEW: base header font size
-            lineHeight: '1.4',
-            fontFamily: 'Inter, sans-serif',
-            templateId: templateId || 'modern',
-            sectionOrder: [
-                'summary',
-                'experience',
-                'education',
-                'projects', // Keeping projects in default order now
-                'skills',
-                'languages', // NEW: Languages as a separate section
-                'references',
-                'awards',
-                'courses',
-                'certifications',
-                'customSections'
-            ]
+            primaryColor: '#2563EB', dividerColor: '#e0e0e0', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Inter, sans-serif', templateId: templateId || 'modern',
+            sectionOrder: [ 'summary', 'experience', 'education', 'projects', 'skills', 'languages', 'references', 'awards', 'courses', 'certifications', 'customSections' ]
         };
-
         if (templateId) {
             const selectedTemplate = cvTemplates.find(t => t.id === templateId);
             if (selectedTemplate) {
                 initialSettings = { ...initialSettings, ...selectedTemplate.defaultSettings, templateId: templateId };
             }
         }
-
-        // Initialize rich text fields with basic HTML paragraphs
         return {
             personalInformation: { name: '', professionalTitle: '', email: '', phone: '', linkedin: '', city: '', country: '', portfolioLink: '', contact: '' },
-            summary: '<p></p>', // Initialize as empty HTML paragraph
-            experience: [], 
-            education: [], 
-            projects: [],
-            skills: { technical: '', soft: '' }, 
-            languages: '', 
-            references: [],
-            awards: [],
-            courses: [],
-            certifications: [],
-            customSections: [],
+            summary: '<p></p>', experience: [], education: [], projects: [], skills: { technical: '', soft: '' }, languages: '', references: [], awards: [], courses: [], certifications: [], customSections: [],
             settings: initialSettings,
-            aiHelpers: {
-                targetRole: '', 
-                jobDescription: '', 
-                referencesRaw: '',
-                awardsRaw: '',
-                coursesRaw: '',
-                certificationsRaw: '',
-                customSectionsRaw: ''
-            },
+            aiHelpers: { targetRole: '', jobDescription: '', referencesRaw: '', awardsRaw: '', coursesRaw: '', certificationsRaw: '', customSectionsRaw: '' },
         };
     };
 
@@ -283,91 +164,39 @@ const CvBuilder = () => {
     const [cvName, setCvName] = useState("Untitled CV");
     const [mode, setMode] = useState(null);
     const [aiFlowStep, setAiFlowStep] = useState(null);
-
     const [isAiGenerated, setIsAiGenerated] = useState(false);
-    
     const primaryColor = cvData?.settings?.primaryColor || '#2563EB';
-
     const [isAiLoading, setIsAiLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [showStartOverConfirm, setShowStartOverConfirm] = useState(false);
     const [pageState, setPageState] = useState('LOADING');
-
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { user, loading } = useAuth();
+    const { user, loading, isAuthenticated } = useAuth(); // --- CHANGE: Get user, loading, and isAuthenticated
     const componentToPrintRef = useRef(null);
 
     const handlePrint = useReactToPrint({
         contentRef: componentToPrintRef, 
         documentTitle: `${cvName.replace(/\s/g, '_') || 'My_CV'}`,
         onPrintError: (error) => console.error("Error printing:", error),
-        pageStyle: `
-            @page {
-                size: A4;
-                margin: 1cm;
-            }
-            @media print {
-                body {
-                    -webkit-print-color-adjust: exact;
-                    print-color-adjust: exact;
-                }
-            }
-        `
+        pageStyle: `@page { size: A4; margin: 1cm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`
     });
 
     const fillWithSampleData = () => {
-        setCvData(prev => ({
-            ...prev,
-            personalInformation: { 
-                name: 'Qusai Ahmad', 
-                professionalTitle: 'Senior QA Automation Engineer',
-                email: 'qusai.ahmad@email.com', 
-                phone: '(123) 456-7890', 
-                linkedin: 'linkedin.com/in/q-ahmad', 
-                city: 'Amman', 
-                country: 'Jordan', 
-                portfolioLink: 'github.com/q-ahmad',
-                contact: 'qusai.ahmad@email.com | (123) 456-7890 | linkedin.com/in/q-ahmad'
-            },
-            // **** MODIFIED: SUMMARY WITH HTML TAGS for sample data consistency ****
-            summary: '<p>Highly accomplished Senior QA Automation Engineer with over 7 years of experience specializing in building robust testing frameworks for web and mobile applications. Proven ability to lead teams, optimize CI/CD pipelines, and significantly improve quality and efficiency. Expertise in Cypress, Selenium, Java, and API testing.</p>',
-            experience: [{ 
-                // rawInput remains plain text as it's for AI questionnaire
-                rawInput: 'At Innovate Solutions, as a Test Lead, I designed and implemented a new CI/CD testing pipeline using Jenkins and Selenium, which decreased bug detection time by 40%. Leading a team of 5 QA engineers, I improved test coverage by 30% for our flagship product. Collaborated with development teams to integrate testing earlier in the SDLC.' 
-            }],
-            education: [{ 
-                rawInput: 'B.Sc. in Software Engineering from the Hashemite University, 2019. Courses included Data Structures, Algorithms, Software Testing, Database Systems.' 
-            }],
-            projects: [], // Projects will be populated/converted by AI or manual input in editor
-            skills: { 
-                technical: 'Java, Selenium, Cypress, Appium, SQL, Postman, Jira, Jenkins, GitLab CI/CD, Agile Methodologies, TestRail', 
-                soft: 'Critical Thinking, Communication, Mentorship, Problem-solving, Team Leadership, Adaptability'
-            }, 
-            languages: 'English (Fluent), Arabic (Native)', 
-            aiHelpers: { 
-                targetRole: 'Senior QA Automation Engineer', 
-                jobDescription: 'We are seeking a Senior QA Automation Engineer with extensive experience in creating testing frameworks from scratch. Must be proficient in Cypress and/or Selenium, have strong Java skills, and be able to work with CI/CD pipelines like Jenkins. Experience with API testing using Postman is a plus. Candidates should demonstrate strong leadership and problem-solving skills.', 
-                referencesRaw: 'Professor Jane Smith, (555) 123-4567, Head of CS Dept. at Hashemite University; Dr. Alex Chen, (555) 987-6543, Engineering Director at Innovate Solutions.',
-                awardsRaw: 'Innovator of the Year Award (2023), recognized at Tech Solutions Annual Gala for developing a groundbreaking test automation tool. Employee Recognition for Outstanding Performance (Q4 2022), Innovate Solutions, for significant contributions to project success.',
-                coursesRaw: 'Advanced Selenium WebDriver (Udemy, 2022); Certified ScrumMaster (Scrum Alliance, 2021); API Testing with Postman (LinkedIn Learning, 2020).',
-                certificationsRaw: 'AWS Certified Solutions Architect (2023); PMP (2021).',
-                customSectionsRaw: 'Volunteer Work: Mentored junior developers at Code for Good Foundation (2020-2023), impacting over 100 students. Publications: Co-authored "Effective Strategies for CI/CD in Agile QA," presented at Global Tech Conference 2023.'
-            },
-            references: [],
-            awards: [],
-            courses: [],
-            certifications: [],
-            customSections: [], // These will be populated by AI as HTML
-        }));
+        setCvData(prev => ({ ...prev, personalInformation: { name: 'Qusai Ahmad', professionalTitle: 'Senior QA Automation Engineer', email: 'qusai.ahmad@email.com', phone: '(123) 456-7890', linkedin: 'linkedin.com/in/q-ahmad', city: 'Amman', country: 'Jordan', portfolioLink: 'github.com/q-ahmad', contact: 'qusai.ahmad@email.com | (123) 456-7890 | linkedin.com/in/q-ahmad' }, summary: '<p>Highly accomplished Senior QA Automation Engineer with over 7 years of experience specializing in building robust testing frameworks for web and mobile applications. Proven ability to lead teams, optimize CI/CD pipelines, and significantly improve quality and efficiency. Expertise in Cypress, Selenium, Java, and API testing.</p>', experience: [{ rawInput: 'At Innovate Solutions, as a Test Lead, I designed and implemented a new CI/CD testing pipeline using Jenkins and Selenium, which decreased bug detection time by 40%. Leading a team of 5 QA engineers, I improved test coverage by 30% for our flagship product. Collaborated with development teams to integrate testing earlier in the SDLC.' }], education: [{ rawInput: 'B.Sc. in Software Engineering from the Hashemite University, 2019. Courses included Data Structures, Algorithms, Software Testing, Database Systems.' }], projects: [], skills: { technical: 'Java, Selenium, Cypress, Appium, SQL, Postman, Jira, Jenkins, GitLab CI/CD, Agile Methodologies, TestRail', soft: 'Critical Thinking, Communication, Mentorship, Problem-solving, Team Leadership, Adaptability' }, languages: 'English (Fluent), Arabic (Native)', aiHelpers: { targetRole: 'Senior QA Automation Engineer', jobDescription: 'We are seeking a Senior QA Automation Engineer with extensive experience in creating testing frameworks from scratch. Must be proficient in Cypress and/or Selenium, have strong Java skills, and be able to work with CI/CD pipelines like Jenkins. Experience with API testing using Postman is a plus. Candidates should demonstrate strong leadership and problem-solving skills.', referencesRaw: 'Professor Jane Smith, (555) 123-4567, Head of CS Dept. at Hashemite University; Dr. Alex Chen, (555) 987-6543, Engineering Director at Innovate Solutions.', awardsRaw: 'Innovator of the Year Award (2023), recognized at Tech Solutions Annual Gala for developing a groundbreaking test automation tool. Employee Recognition for Outstanding Performance (Q4 2022), Innovate Solutions, for significant contributions to project success.', coursesRaw: 'Advanced Selenium WebDriver (Udemy, 2022); Certified ScrumMaster (Scrum Alliance, 2021); API Testing with Postman (LinkedIn Learning, 2020).', certificationsRaw: 'AWS Certified Solutions Architect (2023); PMP (2021).', customSectionsRaw: 'Volunteer Work: Mentored junior developers at Code for Good Foundation (2020-2023), impacting over 100 students. Publications: Co-authored "Effective Strategies for CI/CD in Agile QA," presented at Global Tech Conference 2023.' }, references: [], awards: [], courses: [], certifications: [], customSections: [], }));
     };
 
+    // --- CHANGE: Updated useEffect to include email verification check ---
     useEffect(() => {
         if (loading) {
+            return; // Wait until loading is complete
+        }
+        if (!isAuthenticated) {
+            router.push('/login');
             return;
         }
-        if (!user) {
-            router.push('/login');
+        if (user && !user.emailVerified) {
+            router.push('/auth/verify-email');
             return;
         }
 
@@ -398,66 +227,30 @@ const CvBuilder = () => {
                         if (specificCv) {
                             setCvId(specificCv.id);
                             setCvName(specificCv.name);
-                            
                             const templateIdFromSaved = specificCv.cvData?.settings?.templateId;
                             const initialCvData = getInitialCvData(templateIdFromSaved);
-
-                            const loadedCvData = {
-                                ...initialCvData, 
-                                ...specificCv.cvData, 
-                                settings: { 
-                                    ...initialCvData.settings,
-                                    ...specificCv.cvData?.settings
-                                }
-                            };
-                            
-                            // Post-process loaded data to ensure rich text fields are HTML.
-                            // This is a safety measure for old plain text data in Firestore.
+                            const loadedCvData = { ...initialCvData, ...specificCv.cvData, settings: { ...initialCvData.settings, ...specificCv.cvData?.settings } };
                             const ensureHtml = (text) => {
                                 if (!text) return '<p></p>';
-                                // More robust check for existing HTML: contains a tag, or is an empty paragraph
-                                if ((text.trim().startsWith('<') && text.trim().endsWith('>') && text.includes('/')) || text.trim() === '<p></p>') {
-                                    return text; 
-                                }
-                                // Convert plain text bullet points (e.g., from AI raw input or old data) to HTML lists
+                                if ((text.trim().startsWith('<') && text.trim().endsWith('>') && text.includes('/')) || text.trim() === '<p></p>') return text;
                                 if (text.includes('\n- ') || text.includes('\n* ')) {
                                     const lines = text.split('\n');
-                                    const ulContent = lines.map(line => {
-                                        const trimmed = line.replace(/^[-*]\s*/, '').trim();
-                                        return trimmed ? `<li>${trimmed}</li>` : '';
-                                    }).filter(Boolean).join(''); // Filter out empty li elements
+                                    const ulContent = lines.map(line => { const trimmed = line.replace(/^[-*]\s*/, '').trim(); return trimmed ? `<li>${trimmed}</li>` : ''; }).filter(Boolean).join('');
                                     return ulContent ? `<ul>${ulContent}</ul>` : '<p></p>';
                                 }
-                                return `<p>${text}</p>`; // Wrap plain text in paragraph
+                                return `<p>${text}</p>`;
                             };
-
                             loadedCvData.summary = ensureHtml(loadedCvData.summary);
-                            loadedCvData.experience = (loadedCvData.experience || []).map(exp => ({
-                                ...exp,
-                                responsibilities: ensureHtml(exp.responsibilities),
-                                achievements: ensureHtml(exp.achievements)
-                            }));
-                            loadedCvData.projects = (loadedCvData.projects || []).map(proj => ({
-                                ...proj,
-                                description: ensureHtml(proj.description)
-                            }));
-                             loadedCvData.customSections = (loadedCvData.customSections || []).map(section => ({
-                                ...section,
-                                content: ensureHtml(section.content)
-                            }));
-
-
+                            loadedCvData.experience = (loadedCvData.experience || []).map(exp => ({ ...exp, responsibilities: ensureHtml(exp.responsibilities), achievements: ensureHtml(exp.achievements) }));
+                            loadedCvData.projects = (loadedCvData.projects || []).map(proj => ({ ...proj, description: ensureHtml(proj.description) }));
+                            loadedCvData.customSections = (loadedCvData.customSections || []).map(section => ({ ...section, content: ensureHtml(section.content) }));
                             setCvData(loadedCvData);
                             const creationMethod = specificCv.creationMethod || 'manual';
                             setMode(creationMethod);
                             setIsAiGenerated(creationMethod === 'ai');
-                            if (creationMethod === 'ai' && specificCv.cvData) {
-                                setAiFlowStep('editor');
-                            } else if (creationMethod === 'ai') { 
-                                setAiFlowStep('templateSelection'); 
-                            } else {
-                                setAiFlowStep(null);
-                            }
+                            if (creationMethod === 'ai' && specificCv.cvData) { setAiFlowStep('editor'); }
+                            else if (creationMethod === 'ai') { setAiFlowStep('templateSelection'); }
+                            else { setAiFlowStep(null); }
                             setPageState('READY');
                         } else {
                             setErrorMessage("CV not found.");
@@ -475,7 +268,7 @@ const CvBuilder = () => {
             }
         };
         setupCv();
-    }, [user, loading, searchParams, router]);
+    }, [user, loading, isAuthenticated, searchParams, router]);
 
     const saveProgressToCloud = useCallback(async (dataToSave, nameOfCv) => {
         if (!user || !cvId) { return; }
@@ -486,19 +279,9 @@ const CvBuilder = () => {
             const existingCvs = userDocSnap.exists() ? userDocSnap.data().cvs || [] : [];
             const cvIndex = existingCvs.findIndex(cv => cv.id === cvId);
             const creationMethod = cvIndex > -1 ? existingCvs[cvIndex].creationMethod : mode;
-            
-            const newCvPayload = { 
-                id: cvId, 
-                name: nameOfCv, 
-                updatedAt: new Date().toISOString(), 
-                cvData: cvDataToSave, 
-                creationMethod 
-            };
-            if (cvIndex > -1) {
-                existingCvs[cvIndex] = newCvPayload;
-            } else {
-                existingCvs.push(newCvPayload);
-            }
+            const newCvPayload = { id: cvId, name: nameOfCv, updatedAt: new Date().toISOString(), cvData: cvDataToSave, creationMethod };
+            if (cvIndex > -1) { existingCvs[cvIndex] = newCvPayload; }
+            else { existingCvs.push(newCvPayload); }
             await setDoc(userDocRef, { cvs: existingCvs }, { merge: true });
         } catch (error) {
             console.error("Autosave failed:", error);
@@ -516,71 +299,30 @@ const CvBuilder = () => {
         setIsAiLoading(true);
         setErrorMessage('');
         const { targetRole, jobDescription, referencesRaw, awardsRaw, coursesRaw, certificationsRaw, customSectionsRaw } = cvData.aiHelpers;
-        const userInput = {
-            personalInformation: { ...cvData.personalInformation, professionalTitle: cvData.personalInformation.professionalTitle },
-            summary: cvData.summary, // This is HTML from the editor, AI service needs to handle it or expect plain text
-            experienceRaw: cvData.experience[0]?.rawInput, // This is plain text from questionnaire
-            educationRaw: cvData.education[0]?.rawInput, // This is plain text from questionnaire
-            skills: cvData.skills, 
-            languages: cvData.languages, 
-            referencesRaw: referencesRaw,
-            awardsRaw: awardsRaw,
-            coursesRaw: coursesRaw,
-            certificationsRaw: certificationsRaw,
-            customSectionsRaw: customSectionsRaw
-        };
+        const userInput = { personalInformation: { ...cvData.personalInformation, professionalTitle: cvData.personalInformation.professionalTitle }, summary: cvData.summary, experienceRaw: cvData.experience[0]?.rawInput, educationRaw: cvData.education[0]?.rawInput, skills: cvData.skills, languages: cvData.languages, referencesRaw, awardsRaw, coursesRaw, certificationsRaw, customSectionsRaw };
         try {
             const parsedJson = await aiService.generateFullCv(userInput, targetRole, jobDescription);
-            
-            // Post-process AI-generated fields to ensure they are HTML, if AI returns plain text.
-            // IMPORTANT: This `ensureHtml` is crucial for AI output that might be plain text.
             const ensureHtml = (text) => {
                 if (!text) return '<p></p>';
-                // Check if it's already HTML (simple check)
                 if (text.trim().startsWith('<') && text.trim().endsWith('>') && text.includes('/')) return text;
-                // Convert plain text bullet points (e.g., from AI raw input) to HTML lists
                 if (text.includes('\n- ') || text.includes('\n* ')) {
                     const lines = text.split('\n');
-                    const ulContent = lines.map(line => {
-                        const trimmed = line.replace(/^[-*]\s*/, '').trim();
-                        return trimmed ? `<li>${trimmed}</li>` : '';
-                    }).filter(Boolean).join('');
+                    const ulContent = lines.map(line => { const trimmed = line.replace(/^[-*]\s*/, '').trim(); return trimmed ? `<li>${trimmed}</li>` : ''; }).filter(Boolean).join('');
                     return ulContent ? `<ul>${ulContent}</ul>` : '<p></p>';
                 }
-                return `<p>${text}</p>`; // Wrap plain text in paragraph
+                return `<p>${text}</p>`;
             };
-
             const updatedCvData = { 
-                ...cvData, 
-                ...parsedJson, 
-                personalInformation: { 
-                    ...cvData.personalInformation, 
-                    ...parsedJson.personalInformation
-                },
+                ...cvData, ...parsedJson, 
+                personalInformation: { ...cvData.personalInformation, ...parsedJson.personalInformation },
                 summary: ensureHtml(parsedJson.summary || cvData.summary), 
-                experience: (parsedJson.experience || []).map(exp => ({
-                    ...exp,
-                    responsibilities: ensureHtml(exp.responsibilities || ''),
-                    achievements: ensureHtml(exp.achievements || '')
-                })),
-                projects: (parsedJson.projects || []).map(proj => ({
-                    ...proj,
-                    description: ensureHtml(proj.description || '')
-                })),
-                customSections: (parsedJson.customSections || []).map(section => ({
-                    ...section,
-                    content: ensureHtml(section.content || '')
-                })),
+                experience: (parsedJson.experience || []).map(exp => ({ ...exp, responsibilities: ensureHtml(exp.responsibilities || ''), achievements: ensureHtml(exp.achievements || '') })),
+                projects: (parsedJson.projects || []).map(proj => ({ ...proj, description: ensureHtml(proj.description || '') })),
+                customSections: (parsedJson.customSections || []).map(section => ({ ...section, content: ensureHtml(section.content || '') })),
                 languages: parsedJson.languages || cvData.languages, 
-                references: parsedJson.references || [],
-                awards: parsedJson.awards || [],
-                courses: parsedJson.courses || [],
-                certifications: parsedJson.certifications || [],
+                references: parsedJson.references || [], awards: parsedJson.awards || [], courses: parsedJson.courses || [], certifications: parsedJson.certifications || [],
             };
-            setCvData(updatedCvData);
-            setMode('ai'); 
-            setIsAiGenerated(true); 
-            setAiFlowStep('editor'); 
+            setCvData(updatedCvData); setMode('ai'); setIsAiGenerated(true); setAiFlowStep('editor'); 
         } catch (error) {
             setErrorMessage(`Error generating CV: ${error.message}`);
         }
@@ -592,56 +334,34 @@ const CvBuilder = () => {
     const handleChange = useCallback((e, dataKey, index) => {
         const { id, value } = e.target;
         setCvData(prev => {
-            if (!prev) return prev; 
-            const newCvData = JSON.parse(JSON.stringify(prev));
-            if (dataKey) { // For nested objects like personalInformation, skills, aiHelpers
-                if (typeof index === 'number') { // For arrays of objects like experience, education
+            if (!prev) return prev; const newCvData = JSON.parse(JSON.stringify(prev));
+            if (dataKey) {
+                if (typeof index === 'number') {
                     if (!newCvData[dataKey]) newCvData[dataKey] = [];
                     if (!newCvData[dataKey][index]) newCvData[dataKey][index] = {};
                     newCvData[dataKey][index][id] = value;
-                } else { // For direct properties of dataKey object
+                } else {
                     if (!newCvData[dataKey]) newCvData[dataKey] = {};
                     newCvData[dataKey][id] = value;
                 }
-            } else { // For top-level properties like summary, languages
-                newCvData[id] = value;
-            }
+            } else { newCvData[id] = value; }
             return newCvData;
         });
     }, []); 
 
     const handleSettingsChange = useCallback((id, value) => {
-        setCvData(prev => ({
-            ...prev,
-            settings: {
-                ...prev.settings,
-                [id]: value
-            }
-        }));
+        setCvData(prev => ({ ...prev, settings: { ...prev.settings, [id]: value } }));
     }, []);
 
     const handleTemplateSelection = useCallback((templateId) => {
         const selectedTemplate = cvTemplates.find(t => t.id === templateId);
         if (selectedTemplate) {
-            setCvData(prev => ({
-                ...prev,
-                settings: {
-                    ...prev.settings,
-                    ...selectedTemplate.defaultSettings,
-                    templateId: templateId
-                }
-            }));
+            setCvData(prev => ({ ...prev, settings: { ...prev.settings, ...selectedTemplate.defaultSettings, templateId: templateId } }));
         }
     }, [cvTemplates]);
 
     const handleStartOver = () => {
-        setPageState('LOADING');
-        setCvData(getInitialCvData()); 
-        setIsAiGenerated(false);
-        setShowStartOverConfirm(false);
-        setMode(null); 
-        setAiFlowStep(null); 
-        setPageState('READY');
+        setPageState('LOADING'); setCvData(getInitialCvData()); setIsAiGenerated(false); setShowStartOverConfirm(false); setMode(null); setAiFlowStep(null); setPageState('READY');
     };
 
     const renderContent = () => {
@@ -655,6 +375,9 @@ const CvBuilder = () => {
                     return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
                 }
                 if (!mode) {
+                    // --- CHANGE: Define subscription status ---
+                    const isPro = user && user.subscriptionStatus === 'active';
+
                     return (
                         <div className="text-center max-w-4xl mx-auto">
                             <h1 className="text-4xl font-bold mb-4">Choose Your Path</h1>
@@ -668,51 +391,38 @@ const CvBuilder = () => {
                                     <p className="text-gray-500">A simple, single-page form to build your CV.</p>
                                 </div>
                                 <div 
-                                    onClick={() => { setMode('ai'); setAiFlowStep('templateSelection'); }} 
-                                    className="flex-1 p-8 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-all"
+                                    // --- CHANGE: Conditional onClick logic ---
+                                    onClick={() => {
+                                        if (isPro) {
+                                            setMode('ai'); 
+                                            setAiFlowStep('templateSelection');
+                                        } else {
+                                            router.push('/pricing'); // Redirect non-pro users
+                                        }
+                                    }} 
+                                    className="relative group flex-1 p-8 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-all"
                                 >
+                                    {/* --- CHANGE: Add PRO badge if not subscribed --- */}
+                                    {!isPro && (
+                                       <div className="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">PRO</div>
+                                    )}
                                     <h2 className="text-2xl font-bold mb-2 text-blue-600">Premium AI Builder</h2>
                                     <p className="text-gray-500">Generate your CV with AI and edit it with a live preview.</p>
+                                    {/* --- CHANGE: Add tooltip for non-pro users --- */}
+                                    {!isPro && (
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                            Requires a Pro subscription
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     );
                 }
                 if (mode === 'ai') {
-                    if (aiFlowStep === 'templateSelection') {
-                        return (
-                            <TemplateSelector
-                                templates={cvTemplates}
-                                selectedTemplateId={cvData.settings.templateId}
-                                onSelectTemplate={handleTemplateSelection}
-                                onNext={() => setAiFlowStep('questionnaire')}
-                                primaryColor={primaryColor}
-                                setPrimaryColor={(value) => handleSettingsChange('primaryColor', value)}
-                                setDividerColor={(value) => handleSettingsChange('dividerColor', value)}
-                                setFontSize={(value) => handleSettingsChange('paragraphFontSize', value)} // Pass paragraph font size
-                                setLineHeight={(value) => handleSettingsChange('lineHeight', value)}
-                                setFontFamily={(value) => handleSettingsChange('fontFamily', value)}
-                            />
-                        );
-                    } else if (aiFlowStep === 'questionnaire') {
-                        return (
-                            <AIQuestionnaire
-                                cvData={cvData}
-                                generateCvFromUserInput={generateCvFromUserInput}
-                                isAiLoading={isAiLoading}
-                                primaryColor={primaryColor}
-                                handleChange={handleChange}
-                                fillWithSampleData={fillWithSampleData}
-                            />
-                        );
-                    } else if (aiFlowStep === 'editor') {
-                        return (
-                            <AiCvEditor 
-                                cvData={cvData} 
-                                setCvData={setCvData} 
-                            />
-                        );
-                    }
+                    if (aiFlowStep === 'templateSelection') { return ( <TemplateSelector templates={cvTemplates} selectedTemplateId={cvData.settings.templateId} onSelectTemplate={handleTemplateSelection} onNext={() => setAiFlowStep('questionnaire')} primaryColor={primaryColor} setPrimaryColor={(value) => handleSettingsChange('primaryColor', value)} setDividerColor={(value) => handleSettingsChange('dividerColor', value)} setFontSize={(value) => handleSettingsChange('paragraphFontSize', value)} setLineHeight={(value) => handleSettingsChange('lineHeight', value)} setFontFamily={(value) => handleSettingsChange('fontFamily', value)} /> ); }
+                    else if (aiFlowStep === 'questionnaire') { return ( <AIQuestionnaire cvData={cvData} generateCvFromUserInput={generateCvFromUserInput} isAiLoading={isAiLoading} primaryColor={primaryColor} handleChange={handleChange} fillWithSampleData={fillWithSampleData} /> ); }
+                    else if (aiFlowStep === 'editor') { return ( <AiCvEditor cvData={cvData} setCvData={setCvData} /> ); }
                 }
                 if (mode === 'manual') {
                     return <ManualCvForm cvData={cvData} setCvData={setCvData} />;
@@ -722,6 +432,11 @@ const CvBuilder = () => {
                 return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
         }
     };
+
+    // --- CHANGE: Added a loading state for the main page based on auth status ---
+    if (loading) {
+        return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
+    }
 
     return (
         <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
