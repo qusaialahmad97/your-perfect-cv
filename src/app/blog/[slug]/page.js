@@ -1,5 +1,3 @@
-// src/app/blog/[slug]/page.js
-
 import { client, urlFor } from '@/lib/sanity';
 import { PortableText } from '@portabletext/react';
 import Image from 'next/image';
@@ -23,7 +21,6 @@ async function getPost(slug) {
 }
 
 export async function generateMetadata({ params }) {
-  // --- FIX 1: Await the params object before accessing its properties ---
   const awaitedParams = await params;
   const post = await getPost(awaitedParams.slug);
 
@@ -104,7 +101,6 @@ const ptComponents = {
 }
 
 export default async function BlogPost({ params }) {
-  // --- FIX 2: Await the params object here as well ---
   const awaitedParams = await params;
   const post = await getPost(awaitedParams.slug);
 
@@ -112,7 +108,31 @@ export default async function BlogPost({ params }) {
     return <div>Post not found.</div>;
   }
 
-  const jsonLd = { /* ... your existing jsonLd code ... */ };
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    'headline': post.title,
+    'image': post.mainImage ? urlFor(post.mainImage).url() : null,
+    'datePublished': post.publishedAt,
+    'dateModified': post.publishedAt,
+    'author': {
+      '@type': 'Person',
+      'name': post.authorName || 'Your Perfect CV Team',
+    },
+    'publisher': {
+      '@type': 'Organization',
+      'name': 'Your Perfect CV',
+      'logo': {
+        '@type': 'ImageObject',
+        'url': 'https://www.yourperfectcv.com/logo.png', // Replace with your actual logo URL
+      },
+    },
+    'description': post.metaDescription || '',
+    'mainEntityOfPage': {
+      '@type': 'WebPage',
+      '@id': `https://www.yourperfectcv.com/blog/${post.slug}`,
+    },
+  };
 
   return (
     <article className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -128,7 +148,7 @@ export default async function BlogPost({ params }) {
         <div className="mb-8">
           <Image 
             src={urlFor(post.mainImage).width(800).url()} 
-            alt={post.title} 
+            alt={post.title || 'Blog Post Image'} 
             width={800} 
             height={450} 
             className="rounded-lg" 
