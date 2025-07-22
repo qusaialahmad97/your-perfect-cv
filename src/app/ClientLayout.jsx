@@ -2,43 +2,40 @@
 
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
-import usePaddle from "@/hooks/usePaddle";
-
-/**
- * This inner component contains the parts of the layout that need access
- * to the authentication context (like Navbar) or other client hooks (like usePaddle).
- * By placing it inside ClientLayout as a child of AuthProvider, we ensure
- * that all these components share the same, single auth state.
- */
-function AppContent({ children }) {
-  // Now it's safe to call usePaddle() here, because this component
-  // is rendered within the AuthProvider's scope.
-  usePaddle();
-
-  return (
-    <>
-      <Navbar />
-      {/* 
-        Add padding-top to the main content area to prevent it from being
-        hidden by the fixed navbar. A standard navbar height is h-16 (4rem),
-        so pt-20 (5rem) gives a little extra space.
-      */}
-      <main className="pt-20 container mx-auto p-4">
-        {children}
-      </main>
-    </>
-  );
-}
-
+import usePaddle from "@/hooks/usePaddle"; // Assuming you have this for Paddle.js
+import { usePathname } from 'next/navigation'; // Import usePathname
 
 export default function ClientLayout({ children }) {
-  // AuthProvider is the top-level wrapper. It provides the authentication
-  // context to all of its children.
+  usePaddle(); // Initialize Paddle on the client side
+  const pathname = usePathname();
+
+  // --- THE FIX ---
+  // Define which routes should be full-width.
+  const fullWidthRoutes = ['/contact', '/another-full-width-page', '/pricing', '/build', '/'];
+
+  // Check if the current page is one of the full-width routes.
+  const isFullWidth = fullWidthRoutes.includes(pathname);
+
   return (
     <AuthProvider>
-      <AppContent>
-        {children}
-      </AppContent>
+      <Navbar />
+      {/* 
+        Conditionally apply the container class.
+        If the page is in our fullWidthRoutes array, we use a simple div.
+        Otherwise, we wrap the content in our standard centered container.
+      */}
+      {isFullWidth ? (
+        <main className="pt-16"> {/* Basic padding to avoid navbar overlap */}
+          {children}
+        </main>
+      ) : (
+        <main className="pt-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {children}
+          </div>
+        </main>
+      )}
+      {/* You can add a Footer component here if it's also a client component */}
     </AuthProvider>
   );
 }

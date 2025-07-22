@@ -25,16 +25,12 @@ const ContactPage = () => {
 
         try {
             await axios.post('/api/contact', formData);
-            
-            // On success
             setIsError(false);
-            setResponseMessage('Your message has been sent successfully! We will get back to you shortly.');
-            // Clear the form
+            setResponseMessage('✅ Your message has been sent! We’ll get back to you soon.');
             setFormData({ name: '', email: '', message: '' });
-
         } catch (err) {
             setIsError(true);
-            const message = err.response?.data?.message || 'Failed to send message. Please try again later.';
+            const message = err.response?.data?.message || '❌ Failed to send message. Please try again.';
             setResponseMessage(message);
         } finally {
             setIsLoading(false);
@@ -42,79 +38,74 @@ const ContactPage = () => {
     };
 
     return (
-        <div className="bg-gray-50 py-12">
-            <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center">
-                    <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
-                        Contact Us
-                    </h1>
-                    <p className="mt-4 text-xl text-gray-600">
-                        Have a question or feedback? We'd love to hear from you.
+        <section className="min-h-screen bg-gradient-to-br from-blue-50 to-white py-16 px-6">
+            <div className="max-w-3xl mx-auto bg-white shadow-xl rounded-3xl p-10">
+                <div className="text-center mb-10">
+                    <h1 className="text-5xl font-bold text-blue-700">Get in Touch</h1>
+                    <p className="mt-3 text-gray-600 text-lg">
+                        We'd love to hear your thoughts, questions, or feedback.
                     </p>
                 </div>
-                
-                <div className="mt-12 bg-white p-8 rounded-lg shadow-lg">
-                    <form onSubmit={onSubmit}>
-                        <div className="grid grid-cols-1 gap-y-6">
-                            <div>
-                                <label htmlFor="name" className="sr-only">Full name</label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    id="name"
-                                    value={name}
-                                    onChange={onChange}
-                                    className="block w-full shadow-sm py-3 px-4 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 border-gray-300 rounded-md"
-                                    placeholder="Full name"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="email" className="sr-only">Email</label>
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    value={email}
-                                    onChange={onChange}
-                                    autoComplete="email"
-                                    className="block w-full shadow-sm py-3 px-4 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 border-gray-300 rounded-md"
-                                    placeholder="Email address"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="message" className="sr-only">Message</label>
-                                <textarea
-                                    id="message"
-                                    name="message"
-                                    rows={4}
-                                    value={message}
-                                    onChange={onChange}
-                                    className="block w-full shadow-sm py-3 px-4 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 border border-gray-300 rounded-md"
-                                    placeholder="Your message"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
-                                >
-                                    {isLoading ? 'Sending...' : 'Send Message'}
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    {responseMessage && (
-                        <p className={`mt-4 text-center text-sm ${isError ? 'text-red-600' : 'text-green-600'}`}>
-                            {responseMessage}
-                        </p>
-                    )}
-                </div>
+
+                <form onSubmit={onSubmit} className="space-y-6">
+                    <div>
+                        <label htmlFor="name" className="block text-sm font-semibold text-gray-700">Full Name</label>
+                        <input
+                            type="text"
+                            name="name"
+                            id="name"
+                            value={name}
+                            onChange={onChange}
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            placeholder="John Doe"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="email" className="block text-sm font-semibold text-gray-700">Email Address</label>
+                        <input
+                            type="email"
+                            name="email"
+                            id="email"
+                            value={email}
+                            onChange={onChange}
+                            autoComplete="email"
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            placeholder="example@email.com"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="message" className="block text-sm font-semibold text-gray-700">Your Message</label>
+                        <textarea
+                            name="message"
+                            id="message"
+                            rows="5"
+                            value={message}
+                            onChange={onChange}
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                            placeholder="Write your message here..."
+                            required
+                        />
+                    </div>
+                    <div>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full bg-blue-600 text-white py-3 px-6 rounded-xl font-semibold shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
+                        >
+                            {isLoading ? 'Sending...' : 'Send Message'}
+                        </button>
+                    </div>
+                </form>
+
+                {responseMessage && (
+                    <p className={`mt-6 text-center text-sm font-medium ${isError ? 'text-red-600' : 'text-green-600'}`}>
+                        {responseMessage}
+                    </p>
+                )}
             </div>
-        </div>
+        </section>
     );
 };
 
