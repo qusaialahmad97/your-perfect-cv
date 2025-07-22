@@ -126,7 +126,7 @@ const HomePage = () => {
         </p>
         <Link
           href="/register"
-          className="inline-block bg-white text-blue-700 hover:bg-gray-100 font-semibold py-3 px-10 rounded-full text-lg transition-all duration-300 hover:scale-105 shadow-md"
+          className="inline-block bg-white text-green-900 hover:bg-gray-100 font-semibold py-3 px-10 rounded-full text-lg transition-all duration-300 hover:scale-105 shadow-md"
         >
           Start Building Now
         </Link>
