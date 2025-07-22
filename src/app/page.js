@@ -111,7 +111,7 @@ const HomePage = () => {
             ].map(({ name, text }, idx) => (
               <div key={idx} className="bg-white p-6 rounded-xl shadow-md text-gray-700">
                 <p className="italic mb-4">"{text}"</p>
-                <h4 className="font-semibold text-sm">— {name}</h4>
+                <p className="font-semibold text-sm">— {name}</p>
               </div>
             ))}
           </div>
@@ -119,14 +119,14 @@ const HomePage = () => {
       </section>
 
       {/* --- Call to Action --- */}
-      <section className="w-full bg-green-500 py-20 px-6 text-center text-white">
+      <section className="w-full bg-green-600 py-20 px-6 text-center text-white">
         <h2 className="text-4xl md:text-5xl font-bold mb-6">Take the Next Step in Your Career</h2>
         <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8">
           Start building a powerful CV in minutes. It’s free, it’s smart, and it’s built for you.
         </p>
         <Link
           href="/register"
-          className="inline-block bg-white text-green-600 hover:bg-gray-100 font-semibold py-3 px-10 rounded-full text-lg transition-all duration-300 hover:scale-105 shadow-md"
+          className="inline-block bg-white text-green-700 hover:bg-gray-100 font-semibold py-3 px-10 rounded-full text-lg transition-all duration-300 hover:scale-105 shadow-md"
         >
           Start Building Now
         </Link>
