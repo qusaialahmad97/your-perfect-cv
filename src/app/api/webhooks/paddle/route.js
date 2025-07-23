@@ -20,71 +20,78 @@ export async function POST(request) {
     const secret = process.env.PADDLE_WEBHOOK_SECRET;
 
     if (!paddleSignature || !secret) {
-      console.error("Webhook Error: Paddle signature or secret is missing.");
       return NextResponse.json({ message: "Config error." }, { status: 400 });
     }
 
+    // Signature verification
     const [tsPart, h1Part] = paddleSignature.split(';');
     const timestamp = tsPart.split('=')[1];
     const h1 = h1Part.split('=')[1];
     const signedPayload = `${timestamp}:${rawRequestBody}`;
-    
-    // --- THIS IS THE FIX ---
-    // Changed 'sha265' to the correct 'sha256'
     const hmac = crypto.createHmac('sha256', secret);
-    // --- END OF FIX ---
-
     hmac.update(signedPayload);
     const expectedSignature = hmac.digest('hex');
 
     if (h1 !== expectedSignature) {
-      console.warn("Webhook Warning: Invalid Paddle signature.");
       return NextResponse.json({ message: 'Invalid signature.' }, { status: 401 });
     }
 
     const event = JSON.parse(rawRequestBody);
-    
     console.log(`Webhook Received - Event Type: ${event.event_type}`);
-    console.log("Full Event Data:", JSON.stringify(event.data, null, 2));
-
+    
     const db = getFirestore();
     const userId = event.data.custom_data?.user_id;
 
     if (!userId) {
-      console.error("Webhook Error: No user_id found in custom_data. Cannot update user.");
-      return NextResponse.json({ message: "Webhook processed, but no user_id found." }, { status: 200 });
+      console.error("Webhook Error: No user_id found. Cannot update user.");
+      return NextResponse.json({ message: "Webhook processed, no user_id." }, { status: 200 });
     }
     
     console.log(`Processing webhook for User ID: ${userId}`);
     const userRef = db.collection('users').doc(userId);
 
-    if (event.event_type === 'subscription.created' || event.event_type === 'subscription.updated') {
-      console.log("Processing subscription event...");
-      const sub = event.data;
-      let planId = 'free';
-      // *** IMPORTANT: In the latest Paddle API, the price ID is nested. Use sub.items[0].price.id ***
-      if (sub.items[0].price.id === 'pri_01jyyapwta3majwvc2ezgfbqg5') planId = 'pro_monthly';
-      if (sub.items[0].price.id === 'pri_01jyyar1w1y9m3xqzj3gqd1fve') planId = 'pro_yearly';
-
-      await userRef.update({
-        paddleSubscriptionId: sub.id,
-        subscriptionStatus: sub.status,
-        planId: planId,
-        subscriptionPeriodEnd: sub.current_billing_period.ends_at,
-      });
-      console.log(`SUCCESS: Updated Pro subscription for user ${userId} to plan ${planId}`);
-    }
-    else if (event.event_type === 'transaction.completed') {
-      console.log("Processing transaction event...");
+    // --- CONSOLIDATED LOGIC ---
+    // Handle both initial subscription payments and one-time purchases
+    if (event.event_type === 'transaction.completed') {
       const transaction = event.data;
-      if (transaction.items[0].price.id === 'pri_01jyyas2y7hvm4s997w6c0pvk3') {
+      const priceId = transaction.items[0].price.id;
+
+      console.log(`Processing transaction.completed for Price ID: ${priceId}`);
+
+      // Check if it's the Pro Monthly subscription
+      if (priceId === 'pri_01jyyapwta3majwvc2ezgfbqg5') {
+        await userRef.update({
+          subscriptionStatus: 'active',
+          planId: 'pro_monthly',
+        });
+        console.log(`SUCCESS: Activated Pro Monthly for user ${userId}`);
+      } 
+      // Check if it's the Pro Yearly subscription
+      else if (priceId === 'pri_01jyyar1w1y9m3xqzj3gqd1fve') {
+        await userRef.update({
+          subscriptionStatus: 'active',
+          planId: 'pro_yearly',
+        });
+        console.log(`SUCCESS: Activated Pro Yearly for user ${userId}`);
+      }
+      // Check if it's the ATS Scan Pack
+      else if (priceId === 'pri_01jyyas2y7hvm4s997w6c0pvk3') {
         await userRef.update({
           atsScansRemaining: FieldValue.increment(3)
         });
         console.log(`SUCCESS: Added 3 ATS scans to user ${userId}`);
       } else {
-        console.log("Transaction was for a different product, no action taken.");
+        console.log(`Transaction for an unhandled Price ID (${priceId}). No action taken.`);
       }
+    } 
+    // Handle recurring subscription updates (e.g., renewals, cancellations)
+    else if (event.event_type === 'subscription.updated') {
+        const sub = event.data;
+        await userRef.update({
+            subscriptionStatus: sub.status, // e.g., 'active', 'past_due', 'canceled'
+            subscriptionPeriodEnd: sub.current_billing_period.ends_at,
+        });
+        console.log(`SUCCESS: Updated subscription status for user ${userId} to ${sub.status}`);
     } else {
       console.log(`Webhook event type "${event.event_type}" is not handled. No action taken.`);
     }
