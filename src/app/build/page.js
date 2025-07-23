@@ -174,6 +174,7 @@ const CvBuilder = () => {
     const searchParams = useSearchParams();
     const { user, loading, isAuthenticated } = useAuth(); // --- CHANGE: Get user, loading, and isAuthenticated
     const componentToPrintRef = useRef(null);
+    const [isSetupComplete, setIsSetupComplete] = useState(false);
 
     const handlePrint = useReactToPrint({
         contentRef: componentToPrintRef, 
@@ -200,6 +201,10 @@ const CvBuilder = () => {
             return;
         }
 
+        if (isSetupComplete) {
+        return;
+        }
+
         const cvIdFromUrl = searchParams.get('cvId');
         if (!cvIdFromUrl) {
             router.push('/dashboard');
@@ -217,6 +222,7 @@ const CvBuilder = () => {
                 setIsAiGenerated(false);
                 setAiFlowStep(null);
                 setPageState('READY');
+                setIsSetupComplete(true);
             } else {
                 try {
                     const userDocRef = doc(db, 'users', String(user.id));
@@ -252,6 +258,7 @@ const CvBuilder = () => {
                             else if (creationMethod === 'ai') { setAiFlowStep('templateSelection'); }
                             else { setAiFlowStep(null); }
                             setPageState('READY');
+                            setIsSetupComplete(true);
                         } else {
                             setErrorMessage("CV not found.");
                             setPageState('ERROR');
@@ -268,7 +275,7 @@ const CvBuilder = () => {
             }
         };
         setupCv();
-    }, [user, loading, isAuthenticated, searchParams, router]);
+    }, [user, loading, isAuthenticated, searchParams, router, isSetupComplete]);
 
     const saveProgressToCloud = useCallback(async (dataToSave, nameOfCv) => {
         if (!user || !cvId) { return; }
