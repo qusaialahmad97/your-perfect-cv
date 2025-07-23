@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth, db } from '@/firebase'; // Import 'db' from your firebase config
-import { doc, onSnapshot } from 'firebase/firestore'; // Import onSnapshot
+import { auth, db } from '@/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export const AuthContext = createContext({
   user: null,
@@ -19,42 +19,42 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This listener handles Firebase Auth state (logged in / out)
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // --- CHANGE: If user is logged in, set up a Firestore listener ---
         const userRef = doc(db, 'users', firebaseUser.uid);
         
-        // onSnapshot listens for real-time changes to the user document
         const unsubscribeFirestore = onSnapshot(userRef, (doc) => {
           if (doc.exists()) {
             const firestoreData = doc.data();
+            // --- THIS IS THE FIX ---
+            // We now read ALL the subscription fields from Firestore
+            // and add them to the user object.
             setUser({
               id: firebaseUser.uid,
               email: firebaseUser.email,
               emailVerified: firebaseUser.emailVerified,
-              // Add subscription data to our user object!
+              
+              // Subscription data from Firestore
               subscriptionStatus: firestoreData.subscriptionStatus,
               paddleSubscriptionId: firestoreData.paddleSubscriptionId,
+              planId: firestoreData.planId, // <-- ADDED THIS
+              atsScansRemaining: firestoreData.atsScansRemaining, // <-- ADDED THIS
             });
           } else {
-            // This case handles if a user exists in Auth but not Firestore
             setUser(null);
           }
           setLoading(false);
         });
 
-        // Return the firestore unsubscriber to clean it up when the user logs out
         return unsubscribeFirestore;
 
       } else {
-        // User is signed out
         setUser(null);
         setLoading(false);
       }
     });
 
-    return () => unsubscribeAuth(); // Cleanup auth listener on component unmount
+    return () => unsubscribeAuth();
   }, []);
   
   const logout = async () => {

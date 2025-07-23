@@ -1,38 +1,36 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // --- IMPORT useRouter ---
-import { useAuth } from '@/contexts/AuthContext'; // --- IMPORT useAuth ---
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import ATSResult from '@/components/ats/ATSResult';
 import { aiService } from '@/services/aiService';
 
 const ATSCheckerPage = () => {
-  const { user, loading: authLoading, isAuthenticated } = useAuth(); // Get user and loading state
-  const router = useRouter(); // Initialize the router
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
+  const router = useRouter();
 
   const [cvFile, setCvFile] = useState(null);
   const [cvText, setCvText] = useState('');
   const [jobDescription, setJobDescription] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // For local page operations
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [analysisResult, setAnalysisResult] = useState(null);
   const [clientSideGetTextFromPdf, setClientSideGetTextFromPdf] = useState(null);
 
-  // --- NEW: Protection Logic ---
+  // Protection Logic: Redirects non-subscribers
   useEffect(() => {
-    // Wait until the authentication check is complete
     if (!authLoading) {
-      // Check for multiple failure conditions:
-      // 1. Not authenticated
-      // 2. User object exists but email is not verified
-      // 3. User object exists but subscription is not 'active'
-      if (!isAuthenticated || !user?.emailVerified || user?.subscriptionStatus !== 'active') {
-        router.push('/pricing'); // Redirect non-pro users to the pricing page
+      const isPro = user?.subscriptionStatus === 'active' && user?.planId?.startsWith('pro');
+      const hasScans = user?.atsScansRemaining > 0;
+
+      if (!isAuthenticated || !user?.emailVerified || (!isPro && !hasScans)) {
+        router.push('/pricing');
       }
     }
   }, [user, authLoading, isAuthenticated, router]);
-  // --- END OF NEW LOGIC ---
 
+  // Dynamically load the PDF parsing utility on the client side
   useEffect(() => {
     if (typeof window !== 'undefined') {
       import('@/utils/parsePdf')
@@ -74,7 +72,6 @@ const ATSCheckerPage = () => {
   };
 
   const handleAnalysis = async () => {
-    // ... (Your existing handleAnalysis function remains unchanged)
     if (!cvText || !jobDescription) {
       setError('Please upload a CV and provide a job description.');
       return;
@@ -83,16 +80,36 @@ const ATSCheckerPage = () => {
     setError('');
     setAnalysisResult(null);
 
+    // The new, enhanced prompt for detailed analysis
     const prompt = `
-      Act as an expert ATS (Applicant Tracking System) and professional recruiter.
-      Analyze the following CV against the provided Job Description.
+      Act as an elite AI-powered Applicant Tracking System (ATS) and a senior career coach.
+      Analyze the provided CV Text against the provided Job Description.
 
-      Provide a detailed analysis in a strict JSON format. Do not include any text outside of the JSON object.
-      The JSON object must have these exact keys: "matchScore", "matchedKeywords", "missingKeywords", "summary".
-      - "matchScore": An integer between 0 and 100 representing the compatibility.
-      - "matchedKeywords": An array of strings listing key skills and qualifications from the job description that were found in the CV.
-      - "missingKeywords": An array of strings listing key skills and qualifications from the job description that were NOT found in the CV.
-      - "summary": A brief, professional paragraph explaining the score and providing actionable advice for the applicant to improve their CV for this specific role.
+      Your response MUST be a single, minified JSON object with no extra text or formatting outside of it.
+      The JSON object must adhere to this exact structure:
+      {
+        "matchScore": <integer, 0-100>,
+        "extractedData": {
+          "name": "<string, extracted name or 'Not found'>",
+          "email": "<string, extracted email or 'Not found'>",
+          "phone": "<string, extracted phone number or 'Not found'>",
+          "totalExperienceYears": <integer, estimated years of experience or 0>,
+          "extractedSkills": ["<string>", "<string>", ...]
+        },
+        "detailedAnalysis": {
+          "positivePoints": [
+            { "category": "Strong Match", "point": "<string, e.g., 'Excellent alignment on Java and Spring Boot skills'>" },
+            { "category": "Keywords", "point": "<string, e.g., 'Successfully identified keywords like "Agile" and "CI/CD"'>" }
+          ],
+          "areasForImprovement": [
+            { "category": "Missing Keywords", "recommendation": "<string, e.g., 'The job requires "Kubernetes" and "Docker", which were not found in the CV. Consider adding projects or experience that feature these technologies.'>" },
+            { "category": "Clarity & Conciseness", "recommendation": "<string, e.g., 'The summary is a bit long. Try to condense it to 2-3 impactful sentences focusing on key achievements.'>" },
+            { "category": "Professional Tone", "recommendation": "<string, e.g., 'The phrase "my own blog" is informal. Rephrase to "Founder and author of the Speak Accounting blog" for a more professional tone.'>" },
+            { "category": "Quantifiable Achievements", "recommendation": "<string, e.g., 'The bullet point "Managed a team" can be strengthened by quantifying the achievement, such as "Managed a team of 5 engineers to deliver the project 15% ahead of schedule."'>" }
+          ]
+        },
+        "finalSummary": "<string, A brief, professional paragraph explaining the score and providing a concluding piece of actionable advice.>"
+      }
 
       CV Text:
       ---
@@ -126,19 +143,21 @@ const ATSCheckerPage = () => {
     }
   };
 
-  // --- NEW: Loading/Unauthorized State ---
-  // Show a loading spinner while we verify the user's subscription.
-  // This prevents the page content from flashing before the redirect.
-  if (authLoading || !user || user.subscriptionStatus !== 'active') {
+  // Show a loading/verification screen while checking the user's subscription.
+  // This prevents the page content from flashing before a potential redirect.
+  const isPro = user?.subscriptionStatus === 'active' && user?.planId?.startsWith('pro');
+  const hasScans = user?.atsScansRemaining > 0;
+
+  if (authLoading || (!isPro && !hasScans)) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex flex-col justify-center items-center h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        <p className="ml-4 text-gray-600">Verifying your access...</p>
+        <p className="mt-4 text-gray-600">Verifying your access...</p>
       </div>
     );
   }
 
-  // --- If all checks pass, render the page content ---
+  // If all checks pass, render the main page content.
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="text-center mb-10">
