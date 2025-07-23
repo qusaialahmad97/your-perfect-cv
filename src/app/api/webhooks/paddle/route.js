@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore'; // Import FieldValue
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 const serviceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
@@ -24,12 +24,16 @@ export async function POST(request) {
       return NextResponse.json({ message: "Config error." }, { status: 400 });
     }
 
-    // --- Signature verification (no changes needed here) ---
     const [tsPart, h1Part] = paddleSignature.split(';');
     const timestamp = tsPart.split('=')[1];
     const h1 = h1Part.split('=')[1];
     const signedPayload = `${timestamp}:${rawRequestBody}`;
-    const hmac = crypto.createHmac('sha265', secret);
+    
+    // --- THIS IS THE FIX ---
+    // Changed 'sha265' to the correct 'sha256'
+    const hmac = crypto.createHmac('sha256', secret);
+    // --- END OF FIX ---
+
     hmac.update(signedPayload);
     const expectedSignature = hmac.digest('hex');
 
@@ -37,14 +41,11 @@ export async function POST(request) {
       console.warn("Webhook Warning: Invalid Paddle signature.");
       return NextResponse.json({ message: 'Invalid signature.' }, { status: 401 });
     }
-    // --- End verification ---
 
     const event = JSON.parse(rawRequestBody);
     
-    // --- ADDED DEBUG LOGGING ---
     console.log(`Webhook Received - Event Type: ${event.event_type}`);
     console.log("Full Event Data:", JSON.stringify(event.data, null, 2));
-    // --- END DEBUG LOGGING ---
 
     const db = getFirestore();
     const userId = event.data.custom_data?.user_id;
@@ -57,11 +58,11 @@ export async function POST(request) {
     console.log(`Processing webhook for User ID: ${userId}`);
     const userRef = db.collection('users').doc(userId);
 
-    // Handle a Pro Subscription
     if (event.event_type === 'subscription.created' || event.event_type === 'subscription.updated') {
       console.log("Processing subscription event...");
       const sub = event.data;
       let planId = 'free';
+      // *** IMPORTANT: In the latest Paddle API, the price ID is nested. Use sub.items[0].price.id ***
       if (sub.items[0].price.id === 'pri_01jyyapwta3majwvc2ezgfbqg5') planId = 'pro_monthly';
       if (sub.items[0].price.id === 'pri_01jyyar1w1y9m3xqzj3gqd1fve') planId = 'pro_yearly';
 
@@ -73,8 +74,6 @@ export async function POST(request) {
       });
       console.log(`SUCCESS: Updated Pro subscription for user ${userId} to plan ${planId}`);
     }
-
-    // Handle a one-time purchase of ATS Scans
     else if (event.event_type === 'transaction.completed') {
       console.log("Processing transaction event...");
       const transaction = event.data;
