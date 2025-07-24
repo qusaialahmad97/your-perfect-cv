@@ -23,7 +23,6 @@ const ATSCheckerPage = () => {
     if (!authLoading) {
       const isPro = user?.subscriptionStatus === 'active' && user?.planId?.startsWith('pro');
       const hasScans = user?.atsScansRemaining > 0;
-
       if (!isAuthenticated || !user?.emailVerified || (!isPro && !hasScans)) {
         router.push('/pricing');
       }
@@ -80,35 +79,41 @@ const ATSCheckerPage = () => {
     setError('');
     setAnalysisResult(null);
 
-    // The new, enhanced prompt for detailed analysis
     const prompt = `
-      Act as an elite AI-powered Applicant Tracking System (ATS) and a senior career coach.
-      Analyze the provided CV Text against the provided Job Description.
+      Act as an elite AI career coach and a hyper-critical Applicant Tracking System (ATS).
+      Analyze the provided CV against the Job Description with extreme detail.
 
       Your response MUST be a single, minified JSON object with no extra text or formatting outside of it.
       The JSON object must adhere to this exact structure:
       {
-        "matchScore": <integer, 0-100>,
-        "extractedData": {
-          "name": "<string, extracted name or 'Not found'>",
-          "email": "<string, extracted email or 'Not found'>",
-          "phone": "<string, extracted phone number or 'Not found'>",
-          "totalExperienceYears": <integer, estimated years of experience or 0>,
-          "extractedSkills": ["<string>", "<string>", ...]
+        "overallScore": <integer>,
+        "recruiterFeedback": "<string, a 15-second gut reaction a human recruiter would have. Be brutally honest about clarity and impact.>",
+        "scoreBreakdown": { "keywordMatch": <integer>, "relevance": <integer>, "impact": <integer>, "formatting": <integer> },
+        "experienceLevelAnalysis": { "level": "<'Good Match' or 'Overqualified' or 'Underqualified'>", "comment": "<string>" },
+        "keywordAnalysis": {
+          "technical": { "matched": ["<string>"], "missing": ["<string>"] },
+          "softSkills": { "matched": ["<string>"], "missing": ["<string>"] }
         },
-        "detailedAnalysis": {
-          "positivePoints": [
-            { "category": "Strong Match", "point": "<string, e.g., 'Excellent alignment on Java and Spring Boot skills'>" },
-            { "category": "Keywords", "point": "<string, e.g., 'Successfully identified keywords like "Agile" and "CI/CD"'>" }
-          ],
-          "areasForImprovement": [
-            { "category": "Missing Keywords", "recommendation": "<string, e.g., 'The job requires "Kubernetes" and "Docker", which were not found in the CV. Consider adding projects or experience that feature these technologies.'>" },
-            { "category": "Clarity & Conciseness", "recommendation": "<string, e.g., 'The summary is a bit long. Try to condense it to 2-3 impactful sentences focusing on key achievements.'>" },
-            { "category": "Professional Tone", "recommendation": "<string, e.g., 'The phrase "my own blog" is informal. Rephrase to "Founder and author of the Speak Accounting blog" for a more professional tone.'>" },
-            { "category": "Quantifiable Achievements", "recommendation": "<string, e.g., 'The bullet point "Managed a team" can be strengthened by quantifying the achievement, such as "Managed a team of 5 engineers to deliver the project 15% ahead of schedule."'>" }
-          ]
+        "contentFeedback": [
+          {
+            "category": "<'Professional Summary' or 'Work Experience Bullet Point' or 'Skills Section'>",
+            "originalText": "<string, the EXACT original sentence or bullet point from the CV>",
+            "recommendation": "<string, explain WHY this is weak or could be improved (e.g., 'Uses passive language', 'Lacks quantifiable results').>",
+            "suggestedRewrite": "<string, an AI-powered, impactful rewrite of the original text that incorporates action verbs and keywords.>"
+          }
+        ],
+        "industryFeedback": {
+          "isAppropriate": <boolean>,
+          "comment": "<string, a comment on the CV's tone, language, and structure for the specific role (e.g., 'For a senior engineering role, the summary should focus more on architectural decisions and project leadership.')>"
         },
-        "finalSummary": "<string, A brief, professional paragraph explaining the score and providing a concluding piece of actionable advice.>"
+        "timelineAnalysis": {
+          "hasGaps": <boolean>,
+          "comment": "<string, if hasGaps is true, provide a comment and advice (e.g., 'There is a 9-month employment gap between 2021 and 2022. Be prepared to discuss this in an interview, focusing on any professional development or projects from that time.')>"
+        },
+        "interviewQuestions": [
+          "<string, a likely interview question based on the CV and job description.>"
+        ],
+        "finalSummary": "<string, a concluding paragraph summarizing the key strengths and the #1 most important area to improve.>"
       }
 
       CV Text:
@@ -124,18 +129,9 @@ const ATSCheckerPage = () => {
 
     try {
       const responseText = await aiService.callAI(prompt, 0.5);
-      if (responseText) {
-          const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-          try {
-            const parsedJson = JSON.parse(cleanedText);
-            setAnalysisResult(parsedJson);
-          } catch (parseError) {
-            console.error("AI Response JSON Parse Error:", parseError, "--- Raw Text:", cleanedText);
-            throw new Error("The AI returned an invalid format. Please try again.");
-          }
-      } else {
-        throw new Error("No content in AI response.");
-      }
+      const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsedJson = JSON.parse(cleanedText);
+      setAnalysisResult(parsedJson);
     } catch (err) {
       setError(`Analysis failed: ${err.message}`);
     } finally {
@@ -143,8 +139,6 @@ const ATSCheckerPage = () => {
     }
   };
 
-  // Show a loading/verification screen while checking the user's subscription.
-  // This prevents the page content from flashing before a potential redirect.
   const isPro = user?.subscriptionStatus === 'active' && user?.planId?.startsWith('pro');
   const hasScans = user?.atsScansRemaining > 0;
 
@@ -157,12 +151,11 @@ const ATSCheckerPage = () => {
     );
   }
 
-  // If all checks pass, render the main page content.
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-extrabold text-gray-800">ATS Score Checker</h1>
-        <p className="mt-2 text-lg text-gray-600">See how your CV stacks up against a job description.</p>
+        <h1 className="text-4xl font-extrabold text-gray-800">Premium ATS & Career Coach</h1>
+        <p className="mt-2 text-lg text-gray-600">Go beyond a simple score. Get actionable insights to land your next interview.</p>
       </div>
 
       {!analysisResult ? (
@@ -178,7 +171,6 @@ const ATSCheckerPage = () => {
             />
             {cvFile && <p className="mt-3 text-sm text-green-600">✅ {cvFile.name} uploaded successfully.</p>}
           </div>
-
           <div className="bg-white p-6 rounded-xl shadow-lg border">
             <h2 className="text-2xl font-bold mb-4">2. Paste Job Description</h2>
             <textarea
@@ -204,7 +196,10 @@ const ATSCheckerPage = () => {
             {isLoading ? 'Analyzing...' : 'Analyze My CV'}
           </button>
         ) : (
-           <ATSResult result={analysisResult} onReset={() => setAnalysisResult(null)} />
+           <ATSResult 
+              result={analysisResult} 
+              onReset={() => setAnalysisResult(null)}
+           />
         )}
       </div>
     </div>
