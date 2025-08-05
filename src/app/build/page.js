@@ -295,12 +295,17 @@ const CvBuilder = () => {
         }
     }, [user, cvId, mode]);
 
+    // A debounced version of cvData is created and will only change after 3 seconds of inactivity
     const debouncedCvData = useDebounce(cvData, 3000);
+
     useEffect(() => {
-        if (pageState === 'READY' && mode && cvData && cvId) {
-            saveProgressToCloud(cvData, cvName);
+        // Check if the debounced data exists before saving
+        // The other dependencies (`cvName`, `pageState`, etc.) are stable and won't cause excessive re-runs
+        if (pageState === 'READY' && mode && debouncedCvData && cvId) {
+            // We use the debounced data here to ensure we are saving the latest state
+            saveProgressToCloud(debouncedCvData, cvName);
         }
-    }, [debouncedCvData, cvName, pageState, mode, cvData, cvId, saveProgressToCloud]);
+    }, [debouncedCvData, cvName, pageState, mode, cvId, saveProgressToCloud]);
 
     const generateCvFromUserInput = async () => {
         setIsAiLoading(true);
