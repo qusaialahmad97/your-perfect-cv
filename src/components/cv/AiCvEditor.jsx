@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, memo } from 'react';
 import { aiService } from '../../services/aiService';
 import PrintableCv from './PrintableCv'; 
-import RichTextEditor from '../common/RichTextEditor'; // <--- NEW IMPORT
+import RichTextEditor from '../common/RichTextEditor';
 
 // --- Reusable Components ---
 
@@ -22,21 +22,20 @@ const MagicWandButton = ({ onClick, isLoading }) => (
   </button>
 );
 
-// MODIFIED EditableField to conditionally render RichTextEditor
-const EditableField = ({ label, value, onChange, name, type = 'text', rows = 3, onRefine, isRefining, isRichText = false }) => (
+const EditableField = ({ label, value, onChange, name, type = 'text', rows = 3, onRefine, isRefining, isRichText = false, disabled = false }) => (
   <div className="mb-4 relative">
     <label className="block text-sm font-bold text-gray-600 mb-1">{label}</label>
     {isRichText ? (
       <RichTextEditor
         initialHtml={value}
-        onChange={(html) => onChange({ target: { name, value: html } })} // Lexical's onChange gives HTML string
+        onChange={(html) => onChange({ target: { name, value: html } })}
         placeholder={`Enter ${label.toLowerCase()}...`}
-        isEditable={true} // Always editable in AiCvEditor
+        isEditable={true}
       />
     ) : type === 'textarea' ? (
-      <textarea name={name} value={value || ''} onChange={onChange} rows={rows} className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 resize-y" />
+      <textarea name={name} value={value || ''} onChange={onChange} rows={rows} className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 resize-y" disabled={disabled} />
     ) : (
-      <input type={type} name={name} value={value || ''} onChange={onChange} className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500" />
+      <input type={type} name={name} value={value || ''} onChange={onChange} className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500" disabled={disabled} />
     )}
     {onRefine && <MagicWandButton onClick={onRefine} isLoading={isRefining} />}
   </div>
@@ -75,36 +74,24 @@ const AiCvEditor = ({ cvData, setCvData }) => {
       .slice(0, 15);
   }, [cvData.aiHelpers?.jobDescription]);
 
-  // Convert HTML content to plain text for keyword matching for now
   const cvTextContent = useMemo(() => {
-    // A more robust solution might involve parsing HTML to text,
-    // but for simple keyword matching, stripping tags is often sufficient.
     const htmlToPlainText = (html) => html ? html.replace(/<[^>]*>?/gm, ' ') : '';
     let combinedText = '';
     
-    // Personal Info (already plain)
     combinedText += Object.values(cvData.personalInformation).join(' ') + ' ';
-
-    // Summary (potentially HTML)
     combinedText += htmlToPlainText(cvData.summary) + ' ';
 
-    // Experience (responsibilities, achievements)
     cvData.experience.forEach(exp => {
         combinedText += htmlToPlainText(exp.responsibilities) + ' ';
         combinedText += htmlToPlainText(exp.achievements) + ' ';
     });
-
-    // Projects (description)
     cvData.projects.forEach(proj => {
         combinedText += htmlToPlainText(proj.description) + ' ';
     });
-
-    // Custom Sections (content)
     cvData.customSections.forEach(section => {
         combinedText += htmlToPlainText(section.content) + ' ';
     });
 
-    // Other plain text fields
     combinedText += Object.values(cvData.skills).join(' ') + ' ';
     combinedText += cvData.languages + ' ';
 
@@ -121,17 +108,25 @@ const AiCvEditor = ({ cvData, setCvData }) => {
     }));
   };
 
+  const handleSectionVisibilityChange = (sectionId, isVisible) => {
+    setCvData(prev => ({
+        ...prev,
+        settings: {
+            ...prev.settings,
+            sectionVisibility: {
+                ...(prev.settings?.sectionVisibility || {}),
+                [sectionId]: isVisible
+            }
+        }
+    }));
+  };
+
   const handleRefine = async (fieldName, currentValue, updateFn) => {
     if (!currentValue) return;
     setLoadingStates(prev => ({ ...prev, [fieldName]: true }));
     try {
-        // NOTE: The AI service currently expects and returns plain text.
-        // If currentValue is HTML, it will be passed as is. If the AI returns plain text,
-        // it will overwrite the rich text content. For full rich text AI generation,
-        // the AI service itself needs to be capable of understanding/generating HTML.
-        // For now, this will effectively strip formatting if the AI returns plain text.
         const refinedText = await aiService.refineText(currentValue, cvData.aiHelpers?.jobDescription);
-        updateFn(refinedText); // Lexical editor handles taking this and formatting it
+        updateFn(refinedText);
     } catch (error) {
       alert(`Error refining text: ${error.message}`);
     } finally {
@@ -145,11 +140,8 @@ const AiCvEditor = ({ cvData, setCvData }) => {
      setLoadingStates(prev => ({ ...prev, [fieldName]: true }));
      try {
        const ideas = await aiService.generateIdeas(jobTitle);
-       // When generating ideas, append as plain text (Lexical will format on display)
        const existingResponsibilities = cvData.experience[index].responsibilities || '';
        const newResponsibilities = existingResponsibilities ? `${existingResponsibilities}\n${ideas}` : ideas;
-       // The `onChange` handler for EditableField will then pass this to RichTextEditor
-       // which handles converting the plain text to rich text internally.
        handleDynamicChange({ target: { name: 'responsibilities', value: newResponsibilities } }, index, 'experience');
      } catch (error) {
        alert(`Error generating ideas: ${error.message}`);
@@ -162,7 +154,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
     const { name, value } = e.target;
     setCvData(prev => ({...prev, personalInformation: { ...prev.personalInformation, [name]: value }}));
   };
-  // The handleSummaryChange will now directly receive HTML string from RichTextEditor
+  
   const handleSummaryChange = (e) => setCvData(prev => ({ ...prev, summary: e.target.value }));
   
   const handleSkillsChange = (e) => {
@@ -170,21 +162,46 @@ const AiCvEditor = ({ cvData, setCvData }) => {
     setCvData(prev => ({ ...prev, skills: { ...prev.skills, [name]: value }}));
   };
 
-  // Handler for top-level languages field
   const handleLanguagesChange = (e) => setCvData(prev => ({ ...prev, languages: e.target.value }));
 
-  // handleDynamicChange now expects HTML string for rich text fields
   const handleDynamicChange = (e, index, section) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    const val = type === 'checkbox' ? checked : value;
+
     setCvData(prev => {
         const newSectionData = [...(prev[section] || [])];
-        newSectionData[index] = { ...newSectionData[index], [name]: value };
+        const updatedEntry = { ...newSectionData[index], [name]: val };
+        
+        if (section === 'experience' && name === 'isCurrent' && checked) {
+            updatedEntry.endDate = '';
+        }
+        
+        newSectionData[index] = updatedEntry;
         return { ...prev, [section]: newSectionData };
     });
   };
 
-  // When adding new entries, initialize rich text fields with empty HTML paragraphs
-  const addDynamicEntry = (section, defaultData = {}) => setCvData(prev => ({ ...prev, [section]: [...(prev[section] || []), defaultData] }));
+  const addDynamicEntry = (section) => {
+    let newEntry;
+    if (section === 'experience') {
+        newEntry = { jobTitle: '', company: '', startDate: '', endDate: '', isCurrent: false, responsibilities: '<p></p>', achievements: '<p></p>', showResponsibilities: true, showAchievements: true };
+    } else if (section === 'education') {
+        newEntry = { degree: '', institution: '', gradDate: '', gpa: '' };
+    } else if (section === 'projects') {
+        newEntry = { name: '', technologies: '', description: '<p></p>' };
+    } else if (section === 'references') {
+        newEntry = { name: '', phone: '', position: '' };
+    } else if (section === 'awards') {
+        newEntry = { title: '', issuer: '', year: '', description: '' };
+    } else if (section === 'courses') {
+        newEntry = { title: '', institution: '', year: '' };
+    } else if (section === 'certifications') {
+        newEntry = { title: '', issuingBody: '', year: '' };
+    } else if (section === 'customSections') {
+        newEntry = { header: 'New Custom Section', content: '<p></p>' };
+    }
+    setCvData(prev => ({ ...prev, [section]: [...(prev[section] || []), newEntry] }));
+  };
   
   const removeDynamicEntry = (index, section) => {
     setCvData(prev => ({ ...prev, [section]: (prev[section] || []).filter((_, i) => i !== index) }));
@@ -192,8 +209,6 @@ const AiCvEditor = ({ cvData, setCvData }) => {
 
   const handleJobDescriptionChange = (e) => setCvData(prev => ({...prev, aiHelpers: {...prev.aiHelpers, jobDescription: e.target.value }}));
 
-
-  // --- Drag and Drop Logic ---
   const handleDragStart = (e, sectionId) => {
     e.dataTransfer.setData('text/plain', sectionId);
     draggedItemRef.current = sectionId;
@@ -243,7 +258,6 @@ const AiCvEditor = ({ cvData, setCvData }) => {
   const sectionComponents = useMemo(() => ({
     summary: (
       <EditorSection title="Professional Summary" primaryColor={primaryColor}>
-        {/* 'isRichText' prop is key here */}
         <EditableField label="Summary" name="summary" isRichText value={cvData.summary} onChange={handleSummaryChange} onRefine={() => handleRefine('summary', cvData.summary, (v) => setCvData(p => ({...p, summary: v})))} isRefining={loadingStates['summary']} />
       </EditorSection>
     ),
@@ -256,10 +270,30 @@ const AiCvEditor = ({ cvData, setCvData }) => {
              </button>
              <EditableField label="Job Title" name="jobTitle" value={exp.jobTitle} onChange={e => handleDynamicChange(e, index, 'experience')} />
              <EditableField label="Company" name="company" value={exp.company} onChange={e => handleDynamicChange(e, index, 'experience')} />
-             <EditableField label="Duration" name="duration" value={exp.duration} onChange={e => handleDynamicChange(e, index, 'experience')} />
-             {/* 'isRichText' for responsibilities and achievements */}
+             
+             <div className="grid grid-cols-2 gap-4">
+                <EditableField label="Start Date" name="startDate" value={exp.startDate || ''} onChange={e => handleDynamicChange(e, index, 'experience')} placeholder="e.g. Jan 2020"/>
+                <EditableField label="End Date" name="endDate" value={exp.endDate || ''} onChange={e => handleDynamicChange(e, index, 'experience')} disabled={exp.isCurrent} placeholder="e.g. Dec 2022"/>
+             </div>
+             <div className="flex items-center mb-4">
+                <input type="checkbox" name="isCurrent" id={`isCurrent-${index}`} checked={!!exp.isCurrent} onChange={e => handleDynamicChange(e, index, 'experience')} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                <label htmlFor={`isCurrent-${index}`} className="ml-2 block text-sm text-gray-900">I currently work here</label>
+            </div>
+             
              <EditableField label="Responsibilities" name="responsibilities" isRichText value={exp.responsibilities} onChange={e => handleDynamicChange(e, index, 'experience')} onRefine={() => handleRefine(`expResp-${index}`, exp.responsibilities, v => handleDynamicChange({target: {name:'responsibilities', value:v}}, index, 'experience'))} isRefining={loadingStates[`expResp-${index}`]} />
              <EditableField label="Achievements" name="achievements" isRichText value={exp.achievements} onChange={e => handleDynamicChange(e, index, 'experience')} onRefine={() => handleRefine(`expAchv-${index}`, exp.achievements, v => handleDynamicChange({target: {name:'achievements', value:v}}, index, 'experience'))} isRefining={loadingStates[`expAchv-${index}`]} />
+             
+             <div className="flex items-center gap-4 mt-2 text-xs">
+                 <div className="flex items-center">
+                    <input type="checkbox" name="showResponsibilities" id={`showResp-${index}`} checked={exp.showResponsibilities !== false} onChange={e => handleDynamicChange(e, index, 'experience')} className="h-4 w-4" />
+                    <label htmlFor={`showResp-${index}`} className="ml-1">Show Responsibilities</label>
+                 </div>
+                 <div className="flex items-center">
+                    <input type="checkbox" name="showAchievements" id={`showAchv-${index}`} checked={!!exp.showAchievements} onChange={e => handleDynamicChange(e, index, 'experience')} className="h-4 w-4" />
+                    <label htmlFor={`showAchv-${index}`} className="ml-1">Show Achievements</label>
+                 </div>
+             </div>
+             
              {!exp.responsibilities && exp.jobTitle && (
                     <button onClick={() => handleGenerateIdeas(index, exp.jobTitle)} disabled={loadingStates[`experienceIdeas-${index}`]} className="w-full text-xs py-1 px-2 text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-md">
                         {loadingStates[`experienceIdeas-${index}`] ? 'Generating Ideas...' : '🤖 Generate Responsibility Ideas'}
@@ -267,8 +301,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
                  )}
               </div>
             ))}
-            {/* Initialize new experience entries with empty HTML paragraphs for rich text fields */}
-            <button onClick={() => addDynamicEntry('experience', { jobTitle: '', company: '', duration: '', responsibilities: '<p></p>', achievements: '<p></p>' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Work Experience</button>
+            <button onClick={() => addDynamicEntry('experience')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Work Experience</button>
           </EditorSection>
     ),
     education: (
@@ -284,7 +317,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
              <EditableField label="GPA (Optional)" name="gpa" value={edu.gpa} onChange={(e) => handleDynamicChange(e, index, 'education')} />
           </div>
         ))}
-        <button onClick={() => addDynamicEntry('education', { degree: '', institution: '', gradDate: '', gpa: '' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Education</button>
+        <button onClick={() => addDynamicEntry('education')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Education</button>
       </EditorSection>
     ),
     projects: (
@@ -296,12 +329,10 @@ const AiCvEditor = ({ cvData, setCvData }) => {
                     </button>
                     <EditableField label="Project Name" name="name" value={project.name} onChange={e => handleDynamicChange(e, index, 'projects')} />
                     <EditableField label="Technologies Used (e.g. React, Node.js)" name="technologies" value={project.technologies} onChange={e => handleDynamicChange(e, index, 'projects')} />
-                    {/* 'isRichText' for description */}
                     <EditableField label="Description (Bullet points recommended)" name="description" isRichText value={project.description} onChange={e => handleDynamicChange(e, index, 'projects')} onRefine={() => handleRefine(`projDesc-${index}`, project.description, v => handleDynamicChange({target: {name:'description', value:v}}, index, 'projects'))} isRefining={loadingStates[`projDesc-${index}`]}/>
                 </div>
             ))}
-            {/* Initialize new project entries with empty HTML paragraphs for rich text fields */}
-            <button onClick={() => addDynamicEntry('projects', { name: '', technologies: '', description: '<p></p>' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Project</button>
+            <button onClick={() => addDynamicEntry('projects')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Project</button>
         </EditorSection>
     ),
     skills: (
@@ -310,7 +341,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
         <EditableField label="Soft Skills" name="soft" type="textarea" value={cvData.skills?.soft} onChange={handleSkillsChange} onRefine={() => handleRefine('softSkills', cvData.skills?.soft, v => handleSkillsChange({target: {name:'soft', value:v}}))} isRefining={loadingStates['softSkills']} />
       </EditorSection>
     ),
-    languages: ( // Languages section is still plain text
+    languages: (
       <EditorSection title="Languages" primaryColor={primaryColor}>
         <EditableField label="Languages" name="languages" type="textarea" value={cvData.languages} onChange={handleLanguagesChange} />
       </EditorSection>
@@ -327,7 +358,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
              <EditableField label="Phone Number" name="phone" value={ref.phone} onChange={e => handleDynamicChange(e, index, 'references')} />
           </div>
         ))}
-        <button onClick={() => addDynamicEntry('references', { name: '', phone: '', position: '' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Reference</button>
+        <button onClick={() => addDynamicEntry('references')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Reference</button>
       </EditorSection>
     ),
     awards: (
@@ -343,7 +374,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
              <EditableField label="Description (Optional)" name="description" type="textarea" rows="2" value={award.description} onChange={e => handleDynamicChange(e, index, 'awards')} />
           </div>
         ))}
-        <button onClick={() => addDynamicEntry('awards', { title: '', issuer: '', year: '', description: '' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Award</button>
+        <button onClick={() => addDynamicEntry('awards')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Award</button>
       </EditorSection>
     ),
     courses: (
@@ -358,7 +389,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
              <EditableField label="Year (Optional)" name="year" value={course.year} onChange={e => handleDynamicChange(e, index, 'courses')} />
           </div>
         ))}
-        <button onClick={() => addDynamicEntry('courses', { title: '', institution: '', year: '' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Course</button>
+        <button onClick={() => addDynamicEntry('courses')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Course</button>
       </EditorSection>
     ),
     certifications: (
@@ -373,7 +404,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
              <EditableField label="Year (Optional)" name="year" value={cert.year} onChange={e => handleDynamicChange(e, index, 'certifications')} />
           </div>
         ))}
-        <button onClick={() => addDynamicEntry('certifications', { title: '', issuingBody: '', year: '' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Certification</button>
+        <button onClick={() => addDynamicEntry('certifications')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Certification</button>
       </EditorSection>
     ),
     customSections: (
@@ -384,23 +415,21 @@ const AiCvEditor = ({ cvData, setCvData }) => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
              </button>
              <EditableField label="Header" name="header" value={section.header} onChange={e => handleDynamicChange(e, index, 'customSections')} />
-             {/* 'isRichText' for content */}
              <EditableField label="Content" name="content" isRichText value={section.content} onChange={e => handleDynamicChange(e, index, 'customSections')} />
           </div>
         ))}
-        {/* Initialize new custom sections with empty HTML paragraphs for rich text fields */}
-        <button onClick={() => addDynamicEntry('customSections', { header: 'New Custom Section', content: '<p></p>' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Custom Section</button>
+        <button onClick={() => addDynamicEntry('customSections')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Custom Section</button>
       </EditorSection>
     )
-  }), [cvData, loadingStates, primaryColor, handleRefine, handleSkillsChange, handleLanguagesChange, handleDynamicChange, addDynamicEntry, removeDynamicEntry, handleGenerateIdeas, cvTextContent]);
+  }), [cvData, loadingStates, primaryColor, cvTextContent]);
 
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 w-full">
-      <div className="w-full lg:w-2/5">
+      <div className="w-full lg:w-2/5 max-h-screen overflow-y-auto pr-4">
         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
           <h2 className="text-3xl font-extrabold text-gray-900 mb-2 text-center">AI Co-Pilot Editor</h2>
-          <p className="text-center text-gray-600 mb-8">Use the ✨ magic wand to refine text or add a job description to tailor your CV.</p>
+          <p className="text-center text-gray-600 mb-8">Drag & drop sections to reorder them. Use the checkboxes to show or hide content.</p>
 
           <EditorSection title="Job Matcher (Optional)" primaryColor={primaryColor}>
             <EditableField label="Paste Job Description Here" name="jobDescription" type="textarea" rows="4" value={cvData.aiHelpers?.jobDescription} onChange={handleJobDescriptionChange} />
@@ -425,9 +454,39 @@ const AiCvEditor = ({ cvData, setCvData }) => {
              <EditableField label="Portfolio/Website Link" name="portfolioLink" value={cvData.personalInformation?.portfolioLink} onChange={handlePersonalInfoChange} />
           </EditorSection>
 
-          {cvData.settings.sectionOrder?.map(sectionId => {
+          <EditorSection title="Layout & Visibility" primaryColor={primaryColor}>
+            <h4 className="text-md font-bold text-gray-700 mb-2">Visible Sections</h4>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+                {(cvData.settings?.sectionOrder || []).map(sectionId => (
+                    <div key={sectionId} className="flex items-center">
+                        <input
+                            type="checkbox"
+                            id={`vis-${sectionId}`}
+                            checked={cvData.settings?.sectionVisibility?.[sectionId] !== false}
+                            onChange={(e) => handleSectionVisibilityChange(sectionId, e.target.checked)}
+                            className="h-4 w-4"
+                        />
+                        <label htmlFor={`vis-${sectionId}`} className="ml-2 capitalize">{sectionId.replace(/([A-Z])/g, ' $1')}</label>
+                    </div>
+                ))}
+            </div>
+            <hr className="my-4"/>
+            <h4 className="text-md font-bold text-gray-700 mb-2">Display Options</h4>
+            <div className="flex items-center text-sm">
+                <input
+                    type="checkbox"
+                    id="show-exp-headers"
+                    checked={cvData.settings?.showExperienceHeaders !== false}
+                    onChange={(e) => handleSettingsChange('showExperienceHeaders', e.target.checked)}
+                    className="h-4 w-4"
+                />
+                <label htmlFor="show-exp-headers" className="ml-2">Show "Responsibilities/Achievements" Headers</label>
+            </div>
+          </EditorSection>
+
+          {(cvData.settings?.sectionOrder || []).map(sectionId => {
             const sectionContent = sectionComponents[sectionId];
-            if (!sectionContent) return null;
+            if (!sectionContent || cvData.settings?.sectionVisibility?.[sectionId] === false) return null;
 
             return (
               <div 
@@ -439,14 +498,13 @@ const AiCvEditor = ({ cvData, setCvData }) => {
                 onDrop={(e) => handleDrop(e, sectionId)}
                 onDragLeave={handleDragLeave}
                 onDragEnd={handleDragEnd}
-                className="mb-6 border-2 border-transparent rounded-lg transition-all duration-200 ease-in-out cursor-grab"
+                className="mb-0 border-2 border-transparent rounded-lg transition-all duration-200 ease-in-out cursor-grab"
               >
                 {sectionContent}
               </div>
             );
           })}
           
-          {/* CV Styling section remains fixed at the bottom as it's not content */}
           <EditorSection title="CV Styling" primaryColor={primaryColor}>
             <div className="mb-4">
                 <label className="block text-sm font-bold text-gray-600 mb-1">Primary Color</label>
@@ -466,7 +524,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
                     className="w-full h-10 border rounded-md"
                 />
             </div>
-            <div className="mb-4"> {/* NEW FONT SIZE INPUT */}
+            <div className="mb-4">
                 <label className="block text-sm font-bold text-gray-600 mb-1">Header Font Size (pt)</label>
                 <input
                     type="number"
@@ -478,7 +536,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
                     className="w-full p-2 border rounded-md"
                 />
             </div>
-            <div className="mb-4"> {/* NEW FONT SIZE INPUT */}
+            <div className="mb-4">
                 <label className="block text-sm font-bold text-gray-600 mb-1">Paragraph Font Size (pt)</label>
                 <input
                     type="number"

@@ -24,14 +24,15 @@ const CvViewerPageContent = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const componentToPrintRef = useRef(null);
 
-  // Define initial settings for loading, which can be overridden by saved data
+  // UPDATED: To match the structure from build/page.js
   const getInitialCvData = () => ({
-    personalInformation: { name: '', email: '', phone: '', linkedin: '', city: '', country: '', portfolioLink: '', contact: '' },
-    summary: '', 
+    personalInformation: { name: '', professionalTitle: '', email: '', phone: '', linkedin: '', city: '', country: '', portfolioLink: '', contact: '' },
+    summary: '<p></p>',
     experience: [], 
     education: [], 
     projects: [],
-    skills: { technical: '', soft: '', languages: '' },
+    skills: { technical: '', soft: '' }, // Skills object updated
+    languages: '', // Languages is now a top-level string
     references: [],
     awards: [],
     courses: [],
@@ -40,10 +41,12 @@ const CvViewerPageContent = () => {
     settings: {
         primaryColor: '#2563EB',
         dividerColor: '#e0e0e0',
-        fontSize: '11pt',
+        paragraphFontSize: '11pt',
+        headerFontSize: '14pt',
         lineHeight: '1.4',
-        fontFamily: 'Inter, sans-serif', // Added fontFamily
-        templateId: 'modern' // Added templateId
+        fontFamily: 'Inter, sans-serif',
+        templateId: 'modern',
+        sectionOrder: [ 'summary', 'experience', 'education', 'projects', 'skills', 'languages', 'references', 'awards', 'courses', 'certifications', 'customSections' ]
     },
     aiHelpers: {
         targetRole: '', 
@@ -81,15 +84,41 @@ const CvViewerPageContent = () => {
           const specificCv = allCvs.find(cv => cv.id === cvIdFromUrl);
           if (specificCv) {
             setCvName(specificCv.name);
-            // Merge with initial to ensure all keys exist, but saved data takes precedence
-            setCvData({ 
-                ...getInitialCvData(), 
+            
+            // --- UPDATED LOADING LOGIC ---
+            const initialCvData = getInitialCvData();
+            const loadedCvData = { 
+                ...initialCvData, 
                 ...specificCv.cvData,
-                settings: { // Deep merge settings
-                    ...getInitialCvData().settings,
+                settings: {
+                    ...initialCvData.settings,
                     ...specificCv.cvData?.settings
                 }
-            });
+            };
+            
+            // NEW: Ensure all rich text fields are valid HTML
+            const ensureHtml = (text) => {
+                if (!text) return '<p></p>';
+                if ((text.trim().startsWith('<') && text.trim().endsWith('>') && text.includes('/')) || text.trim() === '<p></p>') return text;
+                if (text.includes('\n- ') || text.includes('\n* ')) {
+                    const lines = text.split('\n');
+                    const ulContent = lines.map(line => { const trimmed = line.replace(/^[-*]\s*/, '').trim(); return trimmed ? `<li>${trimmed}</li>` : ''; }).filter(Boolean).join('');
+                    return ulContent ? `<ul>${ulContent}</ul>` : '<p></p>';
+                }
+                return `<p>${text}</p>`;
+            };
+
+            loadedCvData.summary = ensureHtml(loadedCvData.summary);
+            // NOTE: The new 'experience' format from the builder has 'achievements' which is plain text.
+            // When the AI generates 'responsibilities' and 'achievements', they are rich text.
+            // This assumes the data in Firestore is already in the correct format (rich text).
+            loadedCvData.experience = (loadedCvData.experience || []).map(exp => ({ ...exp, responsibilities: ensureHtml(exp.responsibilities), achievements: ensureHtml(exp.achievements) }));
+            loadedCvData.projects = (loadedCvData.projects || []).map(proj => ({ ...proj, description: ensureHtml(proj.description) }));
+            loadedCvData.customSections = (loadedCvData.customSections || []).map(section => ({ ...section, content: ensureHtml(section.content) }));
+
+            setCvData(loadedCvData);
+            // --- END OF UPDATED LOGIC ---
+
           } else {
             setErrorMessage("CV not found.");
           }
@@ -104,7 +133,6 @@ const CvViewerPageContent = () => {
     loadCv();
   }, [user, loading, searchParams]);
 
-  // Determine primary color from cvData or fallback
   const primaryColor = cvData?.settings?.primaryColor || '#2563EB';
 
   if (errorMessage) {
