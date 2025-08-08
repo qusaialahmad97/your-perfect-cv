@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { db, doc, getDoc, setDoc } from '@/utils/firebase-debugger';
+import { db } from '@/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReactToPrint } from 'react-to-print';
 import { aiService } from '@/services/aiService';
