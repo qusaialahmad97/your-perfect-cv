@@ -401,11 +401,11 @@ const CvBuilder = () => {
         return { personalInformation: { name: '', professionalTitle: '', email: '', phone: '', linkedin: '', city: '', country: '', portfolioLink: '' }, summary: '<p></p>', experience: [], education: [], projects: [], skills: { technical: [], soft: [] }, languages: '', references: [], awards: [], courses: [], certifications: [], customSections: [], settings: initialSettings, aiHelpers: { targetRole: '', jobDescription: '', referencesRaw: '', awardsRaw: '', coursesRaw: '', certificationsRaw: '', customSectionsRaw: '' }, };
     }, []);
 
-    const handlePrint = useReactToPrint({ 
-        content: () => componentToPrintRef.current, 
-        documentTitle: `${cvName.replace(/\s/g, '_') || 'My_CV'}`, 
-        onPrintError: (error) => console.error("Error printing:", error), 
-        pageStyle: `@page { size: A4; margin: 1cm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }` 
+    const handlePrint = useReactToPrint({
+        contentRef: componentToPrintRef,  // Direct ref (no callback)
+        documentTitle: `${cvName.replace(/\s/g, '_') || 'My_CV'}`,
+        onPrintError: (error) => console.error("Error printing:", error),
+        pageStyle: `@page { size: A4; margin: 1cm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`
     });
     
     const fillWithSampleData = () => { 
