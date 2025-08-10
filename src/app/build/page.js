@@ -9,6 +9,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReactToPrint } from 'react-to-print';
 import { aiService } from '@/services/aiService';
+import * as pdfjsLib from 'pdfjs-dist'; // <-- ADD THIS IMPORT
 
 import ConfirmationModal from '@/components/common/ConfirmationModal';
 import AiCvEditor from '@/components/cv/AiCvEditor';
@@ -16,12 +17,15 @@ import ManualCvForm from '@/components/cv/ManualCvForm';
 import PrintableCv from '@/components/cv/PrintableCv';
 import TemplateSelector from '@/components/cv/TemplateSelector';
 
+// Configure the PDF.js worker <-- ADD THIS LINE
+pdfjsLib.GlobalWorkerOptions.workerSrc = `/workers/pdf.worker.min.js`;
+
 const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>;
 const ButtonSpinner = () => <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>;
 
-// --- MODIFIED: AIQuestionnaire component enhanced with better questions and input types ---
-const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primaryColor, handleChange, fillWithSampleData }) => {
-    // --- MODIFIED: The questions for experience and education are now broken into smaller, specific fields ---
+
+// --- THIS IS THE NEW, CORRECTED AIQuestionnaire COMPONENT ---
+const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserInput, isAiLoading, primaryColor, fillWithSampleData }) => {
     const aiQuestions = [
         { id: 'targetRole', question: "What is the exact job title you are applying for?", placeholder: "e.g., Senior Frontend Developer", required: true, dataKey: 'aiHelpers' },
         { id: 'jobDescription', question: "To get the best results, paste the job description here.", placeholder: "Pasting the job description helps the AI tailor your CV...", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
@@ -33,94 +37,131 @@ const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primary
         { id: 'city', question: "Which city do you live in?", placeholder: "e.g., San Francisco", optional: true, dataKey: 'personalInformation' },
         { id: 'country', question: "And which country?", placeholder: "e.g., USA", optional: true, dataKey: 'personalInformation' },
         { id: 'portfolioLink', question: "Do you have a portfolio or website link?", placeholder: "e.g., github.com/johndoe", optional: true, dataKey: 'personalInformation' },
-        { id: 'summary', question: "In one or two sentences, summarize your professional background.", placeholder: "e.g., I'm a software engineer with over 8 years of experience building scalable web applications.", required: true, isTextarea: true, dataKey: null },
-        
-        // --- NEW: Granular Experience Questions ---
+        { id: 'summary', question: "In one or two sentences, summarize your professional background.", placeholder: "e.g., I'm a software engineer with over 8 years of experience...", required: true, isTextarea: true, dataKey: null },
         { header: 'Most Relevant Experience', id: 'role', question: "What was your job title?", placeholder: "e.g., Lead Developer", required: true, dataKey: 'experience' },
         { id: 'company', question: "What was the company's name?", placeholder: "e.g., TechCorp Inc.", required: true, dataKey: 'experience' },
         { id: 'location', question: "Where was it located?", placeholder: "e.g., San Francisco, CA", optional: true, dataKey: 'experience' },
         { id: 'startDate', question: "When did you start?", placeholder: "e.g., 2018-06", required: true, dataKey: 'experience' },
         { id: 'endDate', question: "When did you leave? (or 'Present')", placeholder: "e.g., 2022-12 or Present", required: true, dataKey: 'experience' },
-        { id: 'achievements', question: "Describe your key achievements and responsibilities.", placeholder: "e.g., Led a team of 5 developers to launch a new product feature, increasing user engagement by 15%...", isTextarea: true, required: true, dataKey: 'experience' },
-
-        // --- NEW: Granular Education Questions ---
+        { id: 'achievements', question: "Describe your key achievements and responsibilities.", placeholder: "e.g., Led a team of 5 developers...", isTextarea: true, required: true, dataKey: 'experience' },
         { header: 'Highest Level of Education', id: 'degree', question: "What was your degree or program?", placeholder: "e.g., M.Sc. in Computer Science", required: true, dataKey: 'education' },
         { id: 'institution', question: "What was the name of the institution?", placeholder: "e.g., University of Technology", required: true, dataKey: 'education' },
         { id: 'graduationYear', question: "What was your graduation year?", placeholder: "e.g., 2019", required: true, dataKey: 'education' },
         { id: 'location', question: "Where was the institution located?", placeholder: "e.g., New York, NY", optional: true, dataKey: 'education' },
-        
-        { id: 'technical', question: "List your key technical skills.", placeholder: "e.g., Java, Python, React, AWS, Docker", required: true, dataKey: 'skills' },
-        { id: 'soft', question: "And what are your most important soft skills?", placeholder: "e.g., Team Leadership, Project Management, Communication", required: true, dataKey: 'skills' },
+        { id: 'technical', question: "List your key technical skills.", placeholder: "e.g., Java, Python, React...", required: true, dataKey: 'skills' },
+        { id: 'soft', question: "And what are your most important soft skills?", placeholder: "e.g., Team Leadership, Project Management...", required: true, dataKey: 'skills' },
         { id: 'languages', question: "Which languages do you speak, and at what level?", placeholder: "e.g., English (Native), Spanish (Conversational)", optional: true, dataKey: null },
-        { id: 'referencesRaw', question: "List any professional references. Include Name, Phone, and Position for each. (Optional)", placeholder: "e.g., John Doe, (123) 456-7890, Senior Manager at Acme Corp.", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
-        { id: 'awardsRaw', question: "Tell us about any awards or recognitions you've received. (Optional)", placeholder: "e.g., Employee of the Year 2023, Innovator Award 2022", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
-        { id: 'coursesRaw', question: "List any relevant courses or online learning you've completed. (Optional)", placeholder: "e.g., Machine Learning Specialization, Coursera (2020)", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
-        { id: 'certificationsRaw', question: "Include any professional certifications you hold. (Optional)", placeholder: "e.g., AWS Certified Solutions Architect (2023)", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
-        { id: 'customSectionsRaw', question: "Do you have other information like volunteer work or publications? (Optional)", placeholder: "Format: 'Header: Content'. e.g., 'Volunteer Work: Mentored junior developers at Code for Good Foundation.'", isTextarea: true, optional: true, dataKey: 'aiHelpers' }
+        { id: 'referencesRaw', question: "List any professional references. (Optional)", placeholder: "e.g., John Doe, Senior Manager...", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
+        { id: 'awardsRaw', question: "Tell us about any awards or recognitions. (Optional)", placeholder: "e.g., Employee of the Year 2023", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
+        { id: 'coursesRaw', question: "List any relevant courses. (Optional)", placeholder: "e.g., Machine Learning Specialization, Coursera", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
+        { id: 'certificationsRaw', question: "Include any professional certifications. (Optional)", placeholder: "e.g., AWS Certified Solutions Architect", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
+        { id: 'customSectionsRaw', question: "Do you have other information like volunteer work? (Optional)", placeholder: "e.g., 'Volunteer Work: Mentored junior developers.'", isTextarea: true, optional: true, dataKey: 'aiHelpers' }
     ];
-    
+
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const nextQuestion = () => { if (currentQuestionIndex < aiQuestions.length - 1) { setCurrentQuestionIndex(prev => prev + 1); } };
-    const prevQuestion = () => { if (currentQuestionIndex > 0) { setCurrentQuestionIndex(prev => prev - 1); } };
+    const [isParsing, setIsParsing] = useState(false);
+    const [parseError, setParseError] = useState('');
+    const fileInputRef = useRef(null);
+
+    const nextQuestion = () => { if (currentQuestionIndex < aiQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1); };
+    const prevQuestion = () => { if (currentQuestionIndex > 0) setCurrentQuestionIndex(prev => prev - 1); };
+
+    const handleFileUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file || file.type !== 'application/pdf') {
+            setParseError('Please select a PDF file.');
+            return;
+        }
+        setIsParsing(true);
+        setParseError('');
+        try {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const typedArray = new Uint8Array(e.target.result);
+                const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                let fullText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    fullText += textContent.items.map(item => item.str).join(' ');
+                }
+                const parsedData = await aiService.parseCvText(fullText);
+                setCvData(prevData => ({
+                    ...prevData,
+                    personalInformation: { ...prevData.personalInformation, ...parsedData.personalInformation },
+                    summary: parsedData.summary || prevData.summary,
+                    experience: parsedData.experience?.length > 0 ? parsedData.experience : prevData.experience,
+                    education: parsedData.education?.length > 0 ? parsedData.education : prevData.education,
+                    skills: { ...prevData.skills, ...parsedData.skills },
+                }));
+            };
+            reader.readAsArrayBuffer(file);
+        } catch (error) {
+            console.error(error);
+            setParseError(error.message || 'Could not read or parse the PDF.');
+        } finally {
+            setIsParsing(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     const currentQuestion = aiQuestions[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / aiQuestions.length) * 100;
-    
-    // --- MODIFIED: Simplified logic for getting the current value from the structured data ---
+
     let currentValue = '';
     if (cvData) {
         if (currentQuestion.dataKey) {
-            // For experience/education, we drill down into the first item of the array
             if (['experience', 'education'].includes(currentQuestion.dataKey)) {
                 currentValue = cvData[currentQuestion.dataKey]?.[0]?.[currentQuestion.id] || '';
             } else {
                  currentValue = cvData[currentQuestion.dataKey]?.[currentQuestion.id] || '';
             }
         } else {
-            // For top-level properties like 'summary' or 'languages'
             currentValue = cvData[currentQuestion.id] || '';
         }
     }
     
-    // --- MODIFIED: Simplified input change handler ---
     const handleInputChange = (e) => {
-        // We always edit the first item (index 0) for experience and education in the questionnaire
         const index = ['experience', 'education'].includes(currentQuestion.dataKey) ? 0 : undefined;
         handleChange(e, currentQuestion.dataKey, index);
     };
     
-    // --- NEW: Render an input or textarea based on the question config ---
     const inputElement = currentQuestion.isTextarea ? (
-        <textarea 
-            id={currentQuestion.id} 
-            rows={8} 
-            value={currentValue} 
-            onChange={handleInputChange} 
-            placeholder={currentQuestion.placeholder} 
-            className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500" 
-        />
+        <textarea id={currentQuestion.id} rows={8} value={currentValue} onChange={handleInputChange} placeholder={currentQuestion.placeholder} className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500" />
     ) : (
-        <input 
-            type="text"
-            id={currentQuestion.id} 
-            value={currentValue} 
-            onChange={handleInputChange} 
-            placeholder={currentQuestion.placeholder} 
-            className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500" 
-        />
+        <input type="text" id={currentQuestion.id} value={currentValue} onChange={handleInputChange} placeholder={currentQuestion.placeholder} className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500" />
     );
-    
+
     return (
         <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-center mb-2">AI-Powered CV Builder</h2>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">AI-Powered CV Builder</h2>
                 <button onClick={fillWithSampleData} className="text-xs bg-purple-100 text-purple-700 py-1 px-2 rounded-md hover:bg-purple-200">Fill Sample</button>
             </div>
-            <p className="text-center text-gray-500 mb-6">Answer these questions, and our AI will write your CV. Your progress is not auto-saved.</p>
+            
+            <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-center">
+                <p className="text-indigo-800 font-semibold mb-2">Have a CV already?</p>
+                <p className="text-sm text-indigo-600 mb-3">Upload your PDF to pre-fill the questions instantly. We don't store your file.</p>
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".pdf" className="hidden" />
+                <button
+                    onClick={() => fileInputRef.current.click()}
+                    disabled={isParsing}
+                    className="w-full py-2 px-4 font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-wait flex items-center justify-center gap-2"
+                >
+                    {isParsing ? (
+                        <><ButtonSpinner /><span>Parsing CV...</span></>
+                    ) : ( "🚀 Upload CV to Pre-fill" )}
+                </button>
+                {parseError && <p className="text-red-500 text-xs mt-2">{parseError}</p>}
+            </div>
+
+            <p className="text-center text-gray-500 mb-6">Or, answer the questions below. Your progress is not auto-saved.</p>
+            
             <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
                 <div className="h-2 rounded-full" style={{ width: `${progress}%`, backgroundColor: primaryColor, transition: 'width 0.3s ease-in-out' }}></div>
             </div>
+
             <div className="mb-6">
-                {/* --- NEW: Display a header for multi-part sections --- */}
                 {currentQuestion.header && <h3 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">{currentQuestion.header}</h3>}
                 <label htmlFor={currentQuestion.id} className="block text-lg font-medium text-gray-800 mb-3">
                     {currentQuestion.question}
@@ -129,6 +170,7 @@ const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primary
                 </label>
                 {inputElement}
             </div>
+
             <div className="flex justify-between items-center">
                 <button onClick={prevQuestion} disabled={currentQuestionIndex === 0} className="py-2 px-4 text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
                     Previous
@@ -147,9 +189,9 @@ const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primary
     );
 };
 
-// ... (The rest of the CvBuilder component)
+
+// --- The Parent CvBuilder Component ---
 const CvBuilder = () => {
-    // ... (keep cvTemplates, getInitialCvData, and state variables the same)
     const cvTemplates = [
         { id: 'modern', name: 'Modern Minimalist', imageUrl: '/images/templates/modern.jpg', defaultSettings: { primaryColor: '#007BFF', dividerColor: '#e0e0e0', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Inter, sans-serif' } },
         { id: 'classic', name: 'Classic Professional', imageUrl: '/images/templates/classic.jpg', defaultSettings: { primaryColor: '#333333', dividerColor: '#cccccc', paragraphFontSize: '10.5pt', headerFontSize: '13.5pt', lineHeight: '1.5', fontFamily: 'Merriweather, serif' } },
@@ -204,7 +246,6 @@ const CvBuilder = () => {
     });
 
     const fillWithSampleData = () => {
-        // --- MODIFIED: Sample data now matches the new structured format for experience and education ---
         const sampleData = {
             ...cvData,
             personalInformation: { name: 'Qusai Ahmad', professionalTitle: 'Senior QA Automation Engineer', email: 'qusai.ahmad@email.com', phone: '(123) 456-7890', linkedin: 'linkedin.com/in/q-ahmad', city: 'Amman', country: 'Jordan', portfolioLink: 'github.com/q-ahmad' },
@@ -241,7 +282,6 @@ const CvBuilder = () => {
         setCvData(sampleData);
     };
 
-    // ... (useEffect for setup remains the same)
     useEffect(() => {
         if (loading) { return; }
         if (!isAuthenticated) { router.push('/login'); return; }
@@ -310,7 +350,6 @@ const CvBuilder = () => {
         setupCv();
     }, [user, loading, isAuthenticated, searchParams, router, isSetupComplete]);
 
-    // ... (saveProgressToCloud remains the same)
     const saveProgressToCloud = async () => {
         if (!user || !cvId || !cvData) {
             setSaveStatus('error');
@@ -346,28 +385,19 @@ const CvBuilder = () => {
     const generateCvFromUserInput = async () => {
         setIsAiLoading(true);
         setErrorMessage('');
-
-        // --- MODIFIED: Assemble raw strings from the new structured data before sending to AI ---
         const exp = cvData.experience?.[0] || {};
         const experienceRaw = `Job Title: ${exp.role || 'N/A'}. Company: ${exp.company || 'N/A'}. Location: ${exp.location || 'N/A'}. Dates: ${exp.startDate || 'N/A'} - ${exp.endDate || 'N/A'}. Achievements: ${exp.achievements || 'N/A'}`;
-
         const edu = cvData.education?.[0] || {};
         const educationRaw = `Degree: ${edu.degree || 'N/A'}. Institution: ${edu.institution || 'N/A'}. Graduation Year: ${edu.graduationYear || 'N/A'}. Location: ${edu.location || 'N/A'}.`;
-
         const { targetRole, jobDescription, referencesRaw, awardsRaw, coursesRaw, certificationsRaw, customSectionsRaw } = cvData.aiHelpers;
-        
         const userInput = {
             personalInformation: { ...cvData.personalInformation },
             summary: cvData.summary,
-            experienceRaw, // Use the assembled string
-            educationRaw,  // Use the assembled string
+            experienceRaw,
+            educationRaw,
             skills: cvData.skills,
             languages: cvData.languages,
-            referencesRaw,
-            awardsRaw,
-            coursesRaw,
-            certificationsRaw,
-            customSectionsRaw
+            referencesRaw, awardsRaw, coursesRaw, certificationsRaw, customSectionsRaw
         };
 
         try {
@@ -401,33 +431,27 @@ const CvBuilder = () => {
         }
     };
 
-    // --- MODIFIED: The handleChange function is now more robust for handling these fields ---
-    // The previous implementation was already good, but this one is slightly cleaner. No major changes needed here.
     const handleChange = useCallback((e, dataKey, index) => {
         const { id, value } = e.target;
         setCvData(prev => {
             if (!prev) return prev;
-            // Deep copy to avoid mutation issues
             const newCvData = JSON.parse(JSON.stringify(prev));
-            
             if (dataKey) {
-                // Handle array data (like experience, education)
                 if (typeof index === 'number') {
                     if (!newCvData[dataKey]) newCvData[dataKey] = [];
                     if (!newCvData[dataKey][index]) newCvData[dataKey][index] = {};
                     newCvData[dataKey][index][id] = value;
-                } else { // Handle object data (like personalInformation, skills)
+                } else {
                     if (!newCvData[dataKey]) newCvData[dataKey] = {};
                     newCvData[dataKey][id] = value;
                 }
-            } else { // Handle top-level properties (like summary)
+            } else {
                 newCvData[id] = value;
             }
             return newCvData;
         });
     }, []); 
 
-    // ... (rest of the component remains the same)
     const handleSettingsChange = useCallback((id, value) => {
         setCvData(prev => ({ ...prev, settings: { ...prev.settings, [id]: value } }));
     }, []);
@@ -445,73 +469,38 @@ const CvBuilder = () => {
 
     const renderContent = () => {
         switch (pageState) {
-            case 'LOADING':
-                return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
-            case 'ERROR':
-                return <div className="text-center text-red-500">{errorMessage}</div>;
+            case 'LOADING': return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
+            case 'ERROR': return <div className="text-center text-red-500">{errorMessage}</div>;
             case 'READY':
-                if (!cvData) {
-                    return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
-                }
+                if (!cvData) { return <div className="flex justify-center items-center h-screen"><Spinner /></div>; }
                 if (!mode) {
                     const isPro = user && user.subscriptionStatus === 'active';
-
                     return (
-                        <div className="text-center max-w-4xl mx-auto">
-                            <h1 className="text-4xl font-bold mb-4">Choose Your Path</h1>
-                            <p className="text-gray-600 mb-8">How would you like to create this CV?</p>
-                            <div className="flex flex-col md:flex-row gap-8">
-                                <div onClick={() => setMode('manual')} className="flex-1 p-8 border-2 rounded-lg cursor-pointer hover:border-blue-500 transition-all">
-                                    <h2 className="text-2xl font-bold mb-2">Manual Builder</h2>
-                                    <p className="text-gray-500">A simple, single-page form to build your CV.</p>
-                                </div>
-                                <div onClick={() => { if (isPro) { setMode('ai'); setAiFlowStep('templateSelection'); } else { router.push('/pricing'); } }} className="relative group flex-1 p-8 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-all">
-                                    {!isPro && (<div className="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">PRO</div>)}
-                                    <h2 className="text-2xl font-bold mb-2 text-blue-600">Premium AI Builder</h2>
-                                    <p className="text-gray-500">Generate your CV with AI and edit it with a live preview.</p>
-                                    {!isPro && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Requires a Pro subscription</div>)}
-                                </div>
-                            </div>
-                        </div>
+                        <div className="text-center max-w-4xl mx-auto"><h1 className="text-4xl font-bold mb-4">Choose Your Path</h1><p className="text-gray-600 mb-8">How would you like to create this CV?</p><div className="flex flex-col md:flex-row gap-8"><div onClick={() => setMode('manual')} className="flex-1 p-8 border-2 rounded-lg cursor-pointer hover:border-blue-500 transition-all"><h2 className="text-2xl font-bold mb-2">Manual Builder</h2><p className="text-gray-500">A simple, single-page form to build your CV.</p></div><div onClick={() => { if (isPro) { setMode('ai'); setAiFlowStep('templateSelection'); } else { router.push('/pricing'); } }} className="relative group flex-1 p-8 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-all">{!isPro && (<div className="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">PRO</div>)}<h2 className="text-2xl font-bold mb-2 text-blue-600">Premium AI Builder</h2><p className="text-gray-500">Generate your CV with AI and edit it with a live preview.</p>{!isPro && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Requires a Pro subscription</div>)}</div></div></div>
                     );
                 }
                 if (mode === 'ai') {
                     if (aiFlowStep === 'templateSelection') { return ( <TemplateSelector templates={cvTemplates} selectedTemplateId={cvData.settings.templateId} onSelectTemplate={handleTemplateSelection} onNext={() => setAiFlowStep('questionnaire')} primaryColor={primaryColor} setPrimaryColor={(value) => handleSettingsChange('primaryColor', value)} setDividerColor={(value) => handleSettingsChange('dividerColor', value)} setFontSize={(value) => handleSettingsChange('paragraphFontSize', value)} setLineHeight={(value) => handleSettingsChange('lineHeight', value)} setFontFamily={(value) => handleSettingsChange('fontFamily', value)} /> ); }
-                    else if (aiFlowStep === 'questionnaire') { return ( <AIQuestionnaire cvData={cvData} generateCvFromUserInput={generateCvFromUserInput} isAiLoading={isAiLoading} primaryColor={primaryColor} handleChange={handleChange} fillWithSampleData={fillWithSampleData} /> ); }
+                    else if (aiFlowStep === 'questionnaire') { 
+                        return ( <AIQuestionnaire cvData={cvData} setCvData={setCvData} handleChange={handleChange} generateCvFromUserInput={generateCvFromUserInput} isAiLoading={isAiLoading} primaryColor={primaryColor} fillWithSampleData={fillWithSampleData} /> );
+                    }
                     else if (aiFlowStep === 'editor') { return ( <AiCvEditor cvData={cvData} setCvData={setCvData} /> ); }
                 }
-                if (mode === 'manual') {
-                    return <ManualCvForm cvData={cvData} setCvData={setCvData} />;
-                }
+                if (mode === 'manual') { return <ManualCvForm cvData={cvData} setCvData={setCvData} />; }
                 return null;
-            default:
-                return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
+            default: return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
         }
     };
 
-    if (loading) {
-        return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
-    }
+    if (loading) { return <div className="flex justify-center items-center h-screen"><Spinner /></div>; }
 
     return (
         <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
             {pageState === 'READY' && cvData && (mode === 'ai' && isAiGenerated || mode === 'manual') && (
-                <div className="mx-auto mb-6 flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-xl shadow-lg border border-gray-200">
-                    <input type="text" value={cvName} onChange={(e) => setCvName(e.target.value)} className="text-2xl font-bold text-gray-800 border-b-2 border-transparent focus:border-blue-500 outline-none flex-grow" placeholder="Enter CV Name" />
-                    <div className="flex items-center gap-4 flex-wrap">
-                        <button onClick={saveProgressToCloud} disabled={saveStatus === 'saving'} className={`font-semibold py-2 px-4 rounded-lg shadow-md transition-colors whitespace-nowrap flex items-center justify-center gap-2 ${ saveStatus === 'saving' ? 'bg-gray-400 text-white cursor-not-allowed' : saveStatus === 'success' ? 'bg-green-500 hover:bg-green-600 text-white' : saveStatus === 'error' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white' }`}>
-                            {saveStatus === 'saving' && <ButtonSpinner />}
-                            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? 'Saved!' : saveStatus === 'error' ? 'Error!' : 'Save Progress'}
-                        </button>
-                        <button onClick={handlePrint} className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition whitespace-nowrap"> Download PDF </button>
-                        <Link href="/dashboard" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition whitespace-nowrap"> Back to Dashboard </Link>
-                    </div>
-                </div>
+                <div className="mx-auto mb-6 flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-xl shadow-lg border border-gray-200"><input type="text" value={cvName} onChange={(e) => setCvName(e.target.value)} className="text-2xl font-bold text-gray-800 border-b-2 border-transparent focus:border-blue-500 outline-none flex-grow" placeholder="Enter CV Name" /><div className="flex items-center gap-4 flex-wrap"><button onClick={saveProgressToCloud} disabled={saveStatus === 'saving'} className={`font-semibold py-2 px-4 rounded-lg shadow-md transition-colors whitespace-nowrap flex items-center justify-center gap-2 ${ saveStatus === 'saving' ? 'bg-gray-400 text-white cursor-not-allowed' : saveStatus === 'success' ? 'bg-green-500 hover:bg-green-600 text-white' : saveStatus === 'error' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white' }`}>{saveStatus === 'saving' && <ButtonSpinner />}{saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? 'Saved!' : saveStatus === 'error' ? 'Error!' : 'Save Progress'}</button><button onClick={handlePrint} className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition whitespace-nowrap">Download PDF</button><Link href="/dashboard" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition whitespace-nowrap">Back to Dashboard</Link></div></div>
             )}
-            <main className="mx-auto"> {renderContent()} </main>
-            <div style={{ position: 'fixed', left: '-10000px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden' }}>
-                {cvData && ( <PrintableCv ref={componentToPrintRef} data={cvData} primaryColor={primaryColor} settings={cvData.settings} /> )}
-            </div>
+            <main className="mx-auto">{renderContent()}</main>
+            <div style={{ position: 'fixed', left: '-10000px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden' }}>{cvData && (<PrintableCv ref={componentToPrintRef} data={cvData} primaryColor={primaryColor} settings={cvData.settings} />)}</div>
             <ConfirmationModal isOpen={showStartOverConfirm} message="Are you sure you want to clear all data? This cannot be undone." onConfirm={handleStartOver} onCancel={() => setShowStartOverConfirm(false)} confirmText="Yes, Clear Data" />
         </div>
     );
