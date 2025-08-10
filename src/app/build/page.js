@@ -13,7 +13,6 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReactToPrint } from 'react-to-print';
 import { aiService } from '@/services/aiService';
-import * as pdfjsLib from 'pdfjs-dist';
 
 import ConfirmationModal from '@/components/common/ConfirmationModal';
 import AiCvEditor from '@/components/cv/AiCvEditor';
@@ -70,44 +69,52 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
     const nextQuestion = () => { if (currentQuestionIndex < aiQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1); };
     const prevQuestion = () => { if (currentQuestionIndex > 0) setCurrentQuestionIndex(prev => prev - 1); };
 
-    const handleFileUpload = async (event) => {
-        const file = event.target.files[0];
-        if (!file || file.type !== 'application/pdf') {
-            setParseError('Please select a PDF file.');
-            return;
-        }
-        setIsParsing(true);
-        setParseError('');
-        try {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const typedArray = new Uint8Array(e.target.result);
-                const pdf = await pdfjsLib.getDocument(typedArray).promise;
-                let fullText = '';
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    fullText += textContent.items.map(item => item.str).join(' ');
-                }
-                const parsedData = await aiService.parseCvText(fullText);
-                setCvData(prevData => ({
+const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file || file.type !== 'application/pdf') {
+        setParseError('Please select a PDF file.');
+        return;
+    }
+    setIsParsing(true);
+    setParseError('');
+    try {
+        // Dynamically import the library HERE
+        const pdfjsLib = await import('pdfjs-dist');
+
+        // Configure the worker right after importing
+        const pdfjsVersion = '4.2.67'; // <-- Use your actual version from package.json
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const typedArray = new Uint8Array(e.target.result);
+            // Now this line works perfectly!
+            const pdf = await pdfjsLib.getDocument(typedArray).promise;
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                fullText += textContent.items.map(item => item.str).join(' ');
+            }
+            const parsedData = await aiService.parseCvText(fullText);
+            setCvData(prevData => ({
                     ...prevData,
                     personalInformation: { ...prevData.personalInformation, ...parsedData.personalInformation },
                     summary: parsedData.summary || prevData.summary,
                     experience: parsedData.experience?.length > 0 ? parsedData.experience : prevData.experience,
                     education: parsedData.education?.length > 0 ? parsedData.education : prevData.education,
                     skills: { ...prevData.skills, ...parsedData.skills },
-                }));
-            };
-            reader.readAsArrayBuffer(file);
-        } catch (error) {
-            console.error(error);
-            setParseError(error.message || 'Could not read or parse the PDF.');
-        } finally {
-            setIsParsing(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-    };
+            }));
+        };
+        reader.readAsArrayBuffer(file);
+    } catch (error) {
+        console.error(error);
+        setParseError(error.message || 'Could not read or parse the PDF.');
+    } finally {
+        setIsParsing(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+};
 
     const currentQuestion = aiQuestions[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / aiQuestions.length) * 100;
