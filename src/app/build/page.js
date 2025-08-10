@@ -3,7 +3,6 @@
 // Add this line at the very top
 export const dynamic = 'force-dynamic';
 
-
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -20,13 +19,22 @@ import ManualCvForm from '@/components/cv/ManualCvForm';
 import PrintableCv from '@/components/cv/PrintableCv';
 import TemplateSelector from '@/components/cv/TemplateSelector';
 
-// Configure the PDF.js worker
+// --- SOLUTION ---
+// Import pdfjs-dist and configure the worker source ONE TIME at the top level.
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Point pdf.js to the worker file you copied into the `public` directory.
+// This path is relative to the root of your domain.
+pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+// --- END SOLUTION ---
+
 
 const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>;
 const ButtonSpinner = () => <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>;
 
 // --- The Complete AIQuestionnaire Component ---
 const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserInput, isAiLoading, primaryColor, fillWithSampleData }) => {
+    // ... (the aiQuestions array remains the same)
     const aiQuestions = [
         { id: 'targetRole', question: "What is the exact job title you are applying for?", placeholder: "e.g., Senior Frontend Developer", required: true, dataKey: 'aiHelpers' },
         { id: 'jobDescription', question: "To get the best results, paste the job description here.", placeholder: "Pasting the job description helps the AI tailor your CV...", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
@@ -67,52 +75,49 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
     const nextQuestion = () => { if (currentQuestionIndex < aiQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1); };
     const prevQuestion = () => { if (currentQuestionIndex > 0) setCurrentQuestionIndex(prev => prev - 1); };
 
-const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file || file.type !== 'application/pdf') {
-        setParseError('Please select a PDF file.');
-        return;
-    }
-    setIsParsing(true);
-    setParseError('');
-    try {
-        // Dynamically import the library HERE
-        const pdfjsLib = await import('pdfjs-dist');
-
-        // Configure the worker right after importing
-        const pdfjsVersion = '4.2.67'; // <-- Use your actual version from package.json
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
-
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const typedArray = new Uint8Array(e.target.result);
-            // Now this line works perfectly!
-            const pdf = await pdfjsLib.getDocument(typedArray).promise;
-            let fullText = '';
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                fullText += textContent.items.map(item => item.str).join(' ');
-            }
-            const parsedData = await aiService.parseCvText(fullText);
-            setCvData(prevData => ({
-                    ...prevData,
-                    personalInformation: { ...prevData.personalInformation, ...parsedData.personalInformation },
-                    summary: parsedData.summary || prevData.summary,
-                    experience: parsedData.experience?.length > 0 ? parsedData.experience : prevData.experience,
-                    education: parsedData.education?.length > 0 ? parsedData.education : prevData.education,
-                    skills: { ...prevData.skills, ...parsedData.skills },
-            }));
-        };
-        reader.readAsArrayBuffer(file);
-    } catch (error) {
-        console.error(error);
-        setParseError(error.message || 'Could not read or parse the PDF.');
-    } finally {
-        setIsParsing(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-};
+    // --- REVISED handleFileUpload FUNCTION ---
+    const handleFileUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file || file.type !== 'application/pdf') {
+            setParseError('Please select a PDF file.');
+            return;
+        }
+        setIsParsing(true);
+        setParseError('');
+        try {
+            // The worker is already configured, so we don't need to do it here.
+            // We also don't need dynamic imports anymore as it's imported at the top.
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const typedArray = new Uint8Array(e.target.result);
+                
+                // Now this line works perfectly because the library is globally available and configured!
+                const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                let fullText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    fullText += textContent.items.map(item => item.str).join(' ');
+                }
+                const parsedData = await aiService.parseCvText(fullText);
+                setCvData(prevData => ({
+                        ...prevData,
+                        personalInformation: { ...prevData.personalInformation, ...parsedData.personalInformation },
+                        summary: parsedData.summary || prevData.summary,
+                        experience: parsedData.experience?.length > 0 ? parsedData.experience : prevData.experience,
+                        education: parsedData.education?.length > 0 ? parsedData.education : prevData.education,
+                        skills: { ...prevData.skills, ...parsedData.skills },
+                }));
+            };
+            reader.readAsArrayBuffer(file);
+        } catch (error) {
+            console.error("PDF Parsing Error:", error);
+            setParseError(error.message || 'Could not read or parse the PDF.');
+        } finally {
+            setIsParsing(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
     const currentQuestion = aiQuestions[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / aiQuestions.length) * 100;
@@ -142,7 +147,7 @@ const handleFileUpload = async (event) => {
     );
 
     return (
-        <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+         <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-200">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold">AI-Powered CV Builder</h2>
                 <button onClick={fillWithSampleData} className="text-xs bg-purple-100 text-purple-700 py-1 px-2 rounded-md hover:bg-purple-200">Fill Sample</button>
@@ -200,7 +205,10 @@ const handleFileUpload = async (event) => {
 
 
 // --- The Parent CvBuilder Component ---
+// The rest of your CvBuilder component remains the same. I have omitted it for brevity,
+// as the changes are only at the top of the file and within the AIQuestionnaire component definition.
 const CvBuilder = () => {
+    // ... all your existing CvBuilder hooks and functions ...
     const cvTemplates = [
         { id: 'modern', name: 'Modern Minimalist', imageUrl: '/images/templates/modern.jpg', defaultSettings: { primaryColor: '#007BFF', dividerColor: '#e0e0e0', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Inter, sans-serif' } },
         { id: 'classic', name: 'Classic Professional', imageUrl: '/images/templates/classic.jpg', defaultSettings: { primaryColor: '#333333', dividerColor: '#cccccc', paragraphFontSize: '10.5pt', headerFontSize: '13.5pt', lineHeight: '1.5', fontFamily: 'Merriweather, serif' } },
@@ -460,7 +468,8 @@ const CvBuilder = () => {
     const handleStartOver = () => {
         setPageState('LOADING'); setCvData(getInitialCvData()); setIsAiGenerated(false); setShowStartOverConfirm(false); setMode(null); setAiFlowStep(null); setPageState('READY');
     };
-
+    
+    // The renderContent function will now correctly render the fixed AIQuestionnaire
     const renderContent = () => {
         switch (pageState) {
             case 'LOADING': return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
