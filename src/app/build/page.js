@@ -21,11 +21,9 @@ import TemplateSelector from '@/components/cv/TemplateSelector';
 
 // --- SOLUTION ---
 // Import pdfjs-dist and configure the worker source ONE TIME at the top level.
-import * as pdfjsLib from 'pdfjs-dist';
 
 // Point pdf.js to the worker file you copied into the `public` directory.
 // This path is relative to the root of your domain.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
 // --- END SOLUTION ---
 
 
@@ -85,36 +83,58 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
         setIsParsing(true);
         setParseError('');
         try {
-            // The worker is already configured, so we don't need to do it here.
-            // We also don't need dynamic imports anymore as it's imported at the top.
+            // --- SOLUTION ---
+            // 1. Dynamically import the library ONLY when this function is called.
+            const pdfjsLib = await import('pdfjs-dist');
+
+            // 2. Set the worker source right after importing it.
+            //    (Using the self-hosted file is still the best practice!)
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+            // --- END SOLUTION ---
+
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const typedArray = new Uint8Array(e.target.result);
-                
-                // Now this line works perfectly because the library is globally available and configured!
-                const pdf = await pdfjsLib.getDocument(typedArray).promise;
-                let fullText = '';
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    fullText += textContent.items.map(item => item.str).join(' ');
-                }
-                const parsedData = await aiService.parseCvText(fullText);
-                setCvData(prevData => ({
+                try {
+                    const typedArray = new Uint8Array(e.target.result);
+                    
+                    // Now this line works perfectly because the library was loaded in the browser.
+                    const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                    let fullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        fullText += textContent.items.map(item => item.str).join(' ');
+                    }
+                    const parsedData = await aiService.parseCvText(fullText);
+                    setCvData(prevData => ({
                         ...prevData,
                         personalInformation: { ...prevData.personalInformation, ...parsedData.personalInformation },
                         summary: parsedData.summary || prevData.summary,
                         experience: parsedData.experience?.length > 0 ? parsedData.experience : prevData.experience,
                         education: parsedData.education?.length > 0 ? parsedData.education : prevData.education,
                         skills: { ...prevData.skills, ...parsedData.skills },
-                }));
+                    }));
+                } catch (innerError) {
+                    console.error("Error during PDF processing:", innerError);
+                    setParseError(innerError.message || 'Failed to process the PDF content.');
+                } finally {
+                    setIsParsing(false);
+                }
             };
+            
+            reader.onerror = () => {
+                setParseError('Failed to read the file.');
+                setIsParsing(false);
+            };
+
             reader.readAsArrayBuffer(file);
+
         } catch (error) {
-            console.error("PDF Parsing Error:", error);
-            setParseError(error.message || 'Could not read or parse the PDF.');
-        } finally {
+            console.error("PDF Library Loading Error:", error);
+            setParseError(error.message || 'Could not load the PDF parsing library.');
             setIsParsing(false);
+        } finally {
+            // The setIsParsing(false) is now inside the reader.onload.finally
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
