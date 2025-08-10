@@ -19,20 +19,11 @@ import ManualCvForm from '@/components/cv/ManualCvForm';
 import PrintableCv from '@/components/cv/PrintableCv';
 import TemplateSelector from '@/components/cv/TemplateSelector';
 
-// --- SOLUTION ---
-// Import pdfjs-dist and configure the worker source ONE TIME at the top level.
-
-// Point pdf.js to the worker file you copied into the `public` directory.
-// This path is relative to the root of your domain.
-// --- END SOLUTION ---
-
-
 const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>;
 const ButtonSpinner = () => <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>;
 
 // --- The Complete AIQuestionnaire Component ---
 const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserInput, isAiLoading, primaryColor, fillWithSampleData }) => {
-    // ... (the aiQuestions array remains the same)
     const aiQuestions = [
         { id: 'targetRole', question: "What is the exact job title you are applying for?", placeholder: "e.g., Senior Frontend Developer", required: true, dataKey: 'aiHelpers' },
         { id: 'jobDescription', question: "To get the best results, paste the job description here.", placeholder: "Pasting the job description helps the AI tailor your CV...", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
@@ -73,7 +64,6 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
     const nextQuestion = () => { if (currentQuestionIndex < aiQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1); };
     const prevQuestion = () => { if (currentQuestionIndex > 0) setCurrentQuestionIndex(prev => prev - 1); };
 
-    // --- REVISED handleFileUpload FUNCTION ---
     const handleFileUpload = async (event) => {
         const file = event.target.files[0];
         if (!file || file.type !== 'application/pdf') {
@@ -83,21 +73,13 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
         setIsParsing(true);
         setParseError('');
         try {
-            // --- SOLUTION ---
-            // 1. Dynamically import the library ONLY when this function is called.
             const pdfjsLib = await import('pdfjs-dist');
-
-            // 2. Set the worker source right after importing it.
-            //    (Using the self-hosted file is still the best practice!)
             pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
-            // --- END SOLUTION ---
 
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
                     const typedArray = new Uint8Array(e.target.result);
-                    
-                    // Now this line works perfectly because the library was loaded in the browser.
                     const pdf = await pdfjsLib.getDocument(typedArray).promise;
                     let fullText = '';
                     for (let i = 1; i <= pdf.numPages; i++) {
@@ -134,7 +116,6 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
             setParseError(error.message || 'Could not load the PDF parsing library.');
             setIsParsing(false);
         } finally {
-            // The setIsParsing(false) is now inside the reader.onload.finally
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
@@ -225,10 +206,7 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
 
 
 // --- The Parent CvBuilder Component ---
-// The rest of your CvBuilder component remains the same. I have omitted it for brevity,
-// as the changes are only at the top of the file and within the AIQuestionnaire component definition.
 const CvBuilder = () => {
-    // ... all your existing CvBuilder hooks and functions ...
     const cvTemplates = [
         { id: 'modern', name: 'Modern Minimalist', imageUrl: '/images/templates/modern.jpg', defaultSettings: { primaryColor: '#007BFF', dividerColor: '#e0e0e0', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Inter, sans-serif' } },
         { id: 'classic', name: 'Classic Professional', imageUrl: '/images/templates/classic.jpg', defaultSettings: { primaryColor: '#333333', dividerColor: '#cccccc', paragraphFontSize: '10.5pt', headerFontSize: '13.5pt', lineHeight: '1.5', fontFamily: 'Merriweather, serif' } },
@@ -489,7 +467,6 @@ const CvBuilder = () => {
         setPageState('LOADING'); setCvData(getInitialCvData()); setIsAiGenerated(false); setShowStartOverConfirm(false); setMode(null); setAiFlowStep(null); setPageState('READY');
     };
     
-    // The renderContent function will now correctly render the fixed AIQuestionnaire
     const renderContent = () => {
         switch (pageState) {
             case 'LOADING': return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
@@ -523,7 +500,18 @@ const CvBuilder = () => {
                 <div className="mx-auto mb-6 flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-xl shadow-lg border border-gray-200"><input type="text" value={cvName} onChange={(e) => setCvName(e.target.value)} className="text-2xl font-bold text-gray-800 border-b-2 border-transparent focus:border-blue-500 outline-none flex-grow" placeholder="Enter CV Name" /><div className="flex items-center gap-4 flex-wrap"><button onClick={saveProgressToCloud} disabled={saveStatus === 'saving'} className={`font-semibold py-2 px-4 rounded-lg shadow-md transition-colors whitespace-nowrap flex items-center justify-center gap-2 ${ saveStatus === 'saving' ? 'bg-gray-400 text-white cursor-not-allowed' : saveStatus === 'success' ? 'bg-green-500 hover:bg-green-600 text-white' : saveStatus === 'error' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white' }`}>{saveStatus === 'saving' && <ButtonSpinner />}{saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? 'Saved!' : saveStatus === 'error' ? 'Error!' : 'Save Progress'}</button><button onClick={handlePrint} className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition whitespace-nowrap">Download PDF</button><Link href="/dashboard" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition whitespace-nowrap">Back to Dashboard</Link></div></div>
             )}
             <main className="mx-auto">{renderContent()}</main>
-            <div style={{ position: 'fixed', left: '-10000px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden' }}>{cvData && (<PrintableCv ref={componentToPrintRef} data={cvData} primaryColor={primaryColor} settings={cvData.settings} />)}</div>
+
+            {/*
+              --- PRINTING FIX APPLIED HERE ---
+              1. The wrapper div now has the `printable-content` class.
+                 This class is targeted by the @media print CSS rules.
+              2. The inline style is updated to be more robust for hiding
+                 the element on screen, preventing any interaction or layout shifts.
+            */}
+            <div className="printable-content" style={{ position: 'absolute', zIndex: -1, opacity: 0, height: 0, overflow: 'hidden' }}>
+                {cvData && (<PrintableCv ref={componentToPrintRef} data={cvData} primaryColor={primaryColor} settings={cvData.settings} />)}
+            </div>
+
             <ConfirmationModal isOpen={showStartOverConfirm} message="Are you sure you want to clear all data? This cannot be undone." onConfirm={handleStartOver} onCancel={() => setShowStartOverConfirm(false)} confirmText="Yes, Clear Data" />
         </div>
     );

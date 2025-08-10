@@ -31,3 +31,26 @@ body {
   left: -9999px;
   /* You can also add z-index: -1 if you ever experience weird layout shifts */
 }
+
+@media print {
+  /* Hide everything on the page by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /*
+   * Make the printable component and everything inside it visible.
+   * This will be the ONLY thing visible on the print preview.
+   */
+  .printable-content, .printable-content * {
+    visibility: visible;
+  }
+
+  /* Position the printable content at the top-left of the page */
+  .printable-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%; /* Ensure it takes full print width */
+  }
+}
