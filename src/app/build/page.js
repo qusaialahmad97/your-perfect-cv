@@ -1,3 +1,6 @@
+// Add this line at the very top
+export const dynamic = 'force-dynamic';
+
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
@@ -9,7 +12,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReactToPrint } from 'react-to-print';
 import { aiService } from '@/services/aiService';
-import * as pdfjsLib from 'pdfjs-dist'; // <-- ADD THIS IMPORT
+import * as pdfjsLib from 'pdfjs-dist';
 
 import ConfirmationModal from '@/components/common/ConfirmationModal';
 import AiCvEditor from '@/components/cv/AiCvEditor';
@@ -17,14 +20,13 @@ import ManualCvForm from '@/components/cv/ManualCvForm';
 import PrintableCv from '@/components/cv/PrintableCv';
 import TemplateSelector from '@/components/cv/TemplateSelector';
 
-// Configure the PDF.js worker <-- ADD THIS LINE
+// Configure the PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `/workers/pdf.worker.min.js`;
 
 const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>;
 const ButtonSpinner = () => <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>;
 
-
-// --- THIS IS THE NEW, CORRECTED AIQuestionnaire COMPONENT ---
+// --- The Complete AIQuestionnaire Component ---
 const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserInput, isAiLoading, primaryColor, fillWithSampleData }) => {
     const aiQuestions = [
         { id: 'targetRole', question: "What is the exact job title you are applying for?", placeholder: "e.g., Senior Frontend Developer", required: true, dataKey: 'aiHelpers' },
@@ -356,7 +358,6 @@ const CvBuilder = () => {
             setTimeout(() => setSaveStatus(''), 2000);
             return;
         }
-
         setSaveStatus('saving');
         try {
             const { aiHelpers, ...cvDataToSave } = cvData;
@@ -365,12 +366,9 @@ const CvBuilder = () => {
             const existingCvs = userDocSnap.exists() ? userDocSnap.data().cvs || [] : [];
             const cvIndex = existingCvs.findIndex(cv => cv.id === cvId);
             const creationMethod = cvIndex > -1 ? existingCvs[cvIndex].creationMethod : mode;
-            
             const newCvPayload = { id: cvId, name: cvName, updatedAt: new Date().toISOString(), cvData: cvDataToSave, creationMethod };
-
             if (cvIndex > -1) { existingCvs[cvIndex] = newCvPayload; }
             else { existingCvs.push(newCvPayload); }
-
             await setDoc(userDocRef, { cvs: existingCvs }, { merge: true });
             setSaveStatus('success');
             setTimeout(() => setSaveStatus(''), 2000); 
@@ -381,7 +379,6 @@ const CvBuilder = () => {
         }
     };
 
-
     const generateCvFromUserInput = async () => {
         setIsAiLoading(true);
         setErrorMessage('');
@@ -390,16 +387,7 @@ const CvBuilder = () => {
         const edu = cvData.education?.[0] || {};
         const educationRaw = `Degree: ${edu.degree || 'N/A'}. Institution: ${edu.institution || 'N/A'}. Graduation Year: ${edu.graduationYear || 'N/A'}. Location: ${edu.location || 'N/A'}.`;
         const { targetRole, jobDescription, referencesRaw, awardsRaw, coursesRaw, certificationsRaw, customSectionsRaw } = cvData.aiHelpers;
-        const userInput = {
-            personalInformation: { ...cvData.personalInformation },
-            summary: cvData.summary,
-            experienceRaw,
-            educationRaw,
-            skills: cvData.skills,
-            languages: cvData.languages,
-            referencesRaw, awardsRaw, coursesRaw, certificationsRaw, customSectionsRaw
-        };
-
+        const userInput = { personalInformation: { ...cvData.personalInformation }, summary: cvData.summary, experienceRaw, educationRaw, skills: cvData.skills, languages: cvData.languages, referencesRaw, awardsRaw, coursesRaw, certificationsRaw, customSectionsRaw };
         try {
             const parsedJson = await aiService.generateFullCv(userInput, targetRole, jobDescription);
             const ensureHtml = (text) => {
@@ -425,8 +413,7 @@ const CvBuilder = () => {
             setCvData(updatedCvData); setMode('ai'); setIsAiGenerated(true); setAiFlowStep('editor'); 
         } catch (error) {
             setErrorMessage(`Error generating CV: ${error.message}`);
-        }
-        finally {
+        } finally {
             setIsAiLoading(false);
         }
     };
