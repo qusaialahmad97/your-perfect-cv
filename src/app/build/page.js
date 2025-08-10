@@ -21,8 +21,6 @@ import PrintableCv from '@/components/cv/PrintableCv';
 import TemplateSelector from '@/components/cv/TemplateSelector';
 
 // Configure the PDF.js worker
-const pdfjsVersion = '^5.4.54'; // <-- IMPORTANT: REPLACE '3.11.174' with YOUR version
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
 
 const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>;
 const ButtonSpinner = () => <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>;
