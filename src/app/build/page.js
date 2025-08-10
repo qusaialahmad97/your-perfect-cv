@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation';
 import { db } from '@/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDebounce } from '@/hooks/useDebounce';
+// DELETED: useDebounce is no longer needed for autosave.
+// import { useDebounce } from '@/hooks/useDebounce';
 import { useReactToPrint } from 'react-to-print';
 import { aiService } from '@/services/aiService';
 
@@ -18,6 +19,8 @@ import PrintableCv from '@/components/cv/PrintableCv';
 import TemplateSelector from '@/components/cv/TemplateSelector';
 
 const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>;
+// NEW: A smaller spinner for the save button.
+const ButtonSpinner = () => <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>;
 
 const AIQuestionnaire = ({ cvData, generateCvFromUserInput, isAiLoading, primaryColor, handleChange, fillWithSampleData }) => {
     const aiQuestions = [
@@ -170,9 +173,11 @@ const CvBuilder = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const [showStartOverConfirm, setShowStartOverConfirm] = useState(false);
     const [pageState, setPageState] = useState('LOADING');
+    // NEW: State to manage the manual save button
+    const [saveStatus, setSaveStatus] = useState(''); // can be '', 'saving', 'success', 'error'
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { user, loading, isAuthenticated } = useAuth(); // --- CHANGE: Get user, loading, and isAuthenticated
+    const { user, loading, isAuthenticated } = useAuth();
     const componentToPrintRef = useRef(null);
     const [isSetupComplete, setIsSetupComplete] = useState(false);
 
@@ -187,10 +192,9 @@ const CvBuilder = () => {
         setCvData(prev => ({ ...prev, personalInformation: { name: 'Qusai Ahmad', professionalTitle: 'Senior QA Automation Engineer', email: 'qusai.ahmad@email.com', phone: '(123) 456-7890', linkedin: 'linkedin.com/in/q-ahmad', city: 'Amman', country: 'Jordan', portfolioLink: 'github.com/q-ahmad', contact: 'qusai.ahmad@email.com | (123) 456-7890 | linkedin.com/in/q-ahmad' }, summary: '<p>Highly accomplished Senior QA Automation Engineer with over 7 years of experience specializing in building robust testing frameworks for web and mobile applications. Proven ability to lead teams, optimize CI/CD pipelines, and significantly improve quality and efficiency. Expertise in Cypress, Selenium, Java, and API testing.</p>', experience: [{ rawInput: 'At Innovate Solutions, as a Test Lead, I designed and implemented a new CI/CD testing pipeline using Jenkins and Selenium, which decreased bug detection time by 40%. Leading a team of 5 QA engineers, I improved test coverage by 30% for our flagship product. Collaborated with development teams to integrate testing earlier in the SDLC.' }], education: [{ rawInput: 'B.Sc. in Software Engineering from the Hashemite University, 2019. Courses included Data Structures, Algorithms, Software Testing, Database Systems.' }], projects: [], skills: { technical: 'Java, Selenium, Cypress, Appium, SQL, Postman, Jira, Jenkins, GitLab CI/CD, Agile Methodologies, TestRail', soft: 'Critical Thinking, Communication, Mentorship, Problem-solving, Team Leadership, Adaptability' }, languages: 'English (Fluent), Arabic (Native)', aiHelpers: { targetRole: 'Senior QA Automation Engineer', jobDescription: 'We are seeking a Senior QA Automation Engineer with extensive experience in creating testing frameworks from scratch. Must be proficient in Cypress and/or Selenium, have strong Java skills, and be able to work with CI/CD pipelines like Jenkins. Experience with API testing using Postman is a plus. Candidates should demonstrate strong leadership and problem-solving skills.', referencesRaw: 'Professor Jane Smith, (555) 123-4567, Head of CS Dept. at Hashemite University; Dr. Alex Chen, (555) 987-6543, Engineering Director at Innovate Solutions.', awardsRaw: 'Innovator of the Year Award (2023), recognized at Tech Solutions Annual Gala for developing a groundbreaking test automation tool. Employee Recognition for Outstanding Performance (Q4 2022), Innovate Solutions, for significant contributions to project success.', coursesRaw: 'Advanced Selenium WebDriver (Udemy, 2022); Certified ScrumMaster (Scrum Alliance, 2021); API Testing with Postman (LinkedIn Learning, 2020).', certificationsRaw: 'AWS Certified Solutions Architect (2023); PMP (2021).', customSectionsRaw: 'Volunteer Work: Mentored junior developers at Code for Good Foundation (2020-2023), impacting over 100 students. Publications: Co-authored "Effective Strategies for CI/CD in Agile QA," presented at Global Tech Conference 2023.' }, references: [], awards: [], courses: [], certifications: [], customSections: [], }));
     };
 
-    // --- CHANGE: Updated useEffect to include email verification check ---
     useEffect(() => {
         if (loading) {
-            return; // Wait until loading is complete
+            return;
         }
         if (!isAuthenticated) {
             router.push('/login');
@@ -277,35 +281,50 @@ const CvBuilder = () => {
         setupCv();
     }, [user, loading, isAuthenticated, searchParams, router, isSetupComplete]);
 
-    const saveProgressToCloud = useCallback(async (dataToSave, nameOfCv) => {
-        if (!user || !cvId) { return; }
+    // MODIFIED: This function is now called manually by the save button.
+    const saveProgressToCloud = async () => {
+        if (!user || !cvId || !cvData) {
+            setSaveStatus('error');
+            setTimeout(() => setSaveStatus(''), 2000);
+            return;
+        }
+
+        setSaveStatus('saving');
         try {
-            const { aiHelpers, ...cvDataToSave } = dataToSave; 
+            const { aiHelpers, ...cvDataToSave } = cvData;
             const userDocRef = doc(db, 'users', String(user.id));
             const userDocSnap = await getDoc(userDocRef);
             const existingCvs = userDocSnap.exists() ? userDocSnap.data().cvs || [] : [];
             const cvIndex = existingCvs.findIndex(cv => cv.id === cvId);
             const creationMethod = cvIndex > -1 ? existingCvs[cvIndex].creationMethod : mode;
-            const newCvPayload = { id: cvId, name: nameOfCv, updatedAt: new Date().toISOString(), cvData: cvDataToSave, creationMethod };
-            if (cvIndex > -1) { existingCvs[cvIndex] = newCvPayload; }
-            else { existingCvs.push(newCvPayload); }
+            
+            const newCvPayload = {
+                id: cvId,
+                name: cvName, // Uses the cvName from state
+                updatedAt: new Date().toISOString(),
+                cvData: cvDataToSave,
+                creationMethod,
+            };
+
+            if (cvIndex > -1) {
+                existingCvs[cvIndex] = newCvPayload;
+            } else {
+                existingCvs.push(newCvPayload);
+            }
+
             await setDoc(userDocRef, { cvs: existingCvs }, { merge: true });
+            setSaveStatus('success');
+            setTimeout(() => setSaveStatus(''), 2000); // Reset status after 2 seconds
         } catch (error) {
-            console.error("Autosave failed:", error);
+            console.error("Save failed:", error);
+            setSaveStatus('error');
+            setTimeout(() => setSaveStatus(''), 2000); // Reset status after 2 seconds
         }
-    }, [user, cvId, mode]);
+    };
 
-    // A debounced version of cvData is created and will only change after 3 seconds of inactivity
-    const debouncedCvData = useDebounce(cvData, 3000);
-
-    useEffect(() => {
-        // Check if the debounced data exists before saving
-        // The other dependencies (`cvName`, `pageState`, etc.) are stable and won't cause excessive re-runs
-        if (pageState === 'READY' && mode && debouncedCvData && cvId) {
-            // We use the debounced data here to ensure we are saving the latest state
-            saveProgressToCloud(debouncedCvData, cvName);
-        }
-    }, [debouncedCvData, cvName, pageState, mode, cvId, saveProgressToCloud]);
+    // DELETED: The debounced data and the useEffect for autosaving are removed.
+    // const debouncedCvData = useDebounce(cvData, 3000);
+    // useEffect(() => { ... }, [debouncedCvData, ...]);
 
     const generateCvFromUserInput = async () => {
         setIsAiLoading(true);
@@ -387,7 +406,6 @@ const CvBuilder = () => {
                     return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
                 }
                 if (!mode) {
-                    // --- CHANGE: Define subscription status ---
                     const isPro = user && user.subscriptionStatus === 'active';
 
                     return (
@@ -403,24 +421,21 @@ const CvBuilder = () => {
                                     <p className="text-gray-500">A simple, single-page form to build your CV.</p>
                                 </div>
                                 <div 
-                                    // --- CHANGE: Conditional onClick logic ---
                                     onClick={() => {
                                         if (isPro) {
                                             setMode('ai'); 
                                             setAiFlowStep('templateSelection');
                                         } else {
-                                            router.push('/pricing'); // Redirect non-pro users
+                                            router.push('/pricing');
                                         }
                                     }} 
                                     className="relative group flex-1 p-8 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-all"
                                 >
-                                    {/* --- CHANGE: Add PRO badge if not subscribed --- */}
                                     {!isPro && (
                                        <div className="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">PRO</div>
                                     )}
                                     <h2 className="text-2xl font-bold mb-2 text-blue-600">Premium AI Builder</h2>
                                     <p className="text-gray-500">Generate your CV with AI and edit it with a live preview.</p>
-                                    {/* --- CHANGE: Add tooltip for non-pro users --- */}
                                     {!isPro && (
                                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                             Requires a Pro subscription
@@ -445,7 +460,6 @@ const CvBuilder = () => {
         }
     };
 
-    // --- CHANGE: Added a loading state for the main page based on auth status ---
     if (loading) {
         return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
     }
@@ -461,7 +475,25 @@ const CvBuilder = () => {
                         className="text-2xl font-bold text-gray-800 border-b-2 border-transparent focus:border-blue-500 outline-none flex-grow" 
                         placeholder="Enter CV Name" 
                     />
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-wrap">
+                        {/* NEW: Save Button with dynamic text and state */}
+                        <button
+                            onClick={saveProgressToCloud}
+                            disabled={saveStatus === 'saving'}
+                            className={`font-semibold py-2 px-4 rounded-lg shadow-md transition-colors whitespace-nowrap flex items-center justify-center gap-2 ${
+                                saveStatus === 'saving'
+                                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                                    : saveStatus === 'success'
+                                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                                    : saveStatus === 'error'
+                                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                            }`}
+                        >
+                            {saveStatus === 'saving' && <ButtonSpinner />}
+                            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? 'Saved!' : saveStatus === 'error' ? 'Error!' : 'Save Progress'}
+                        </button>
+
                         <button
                             onClick={handlePrint}
                             className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition whitespace-nowrap"
