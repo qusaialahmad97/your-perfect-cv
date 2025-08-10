@@ -2,7 +2,6 @@
 // or nested within your CvBuilder component file.
 
 import React, { useState, useRef } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
 import { aiService } from '@/services/aiService'; // Make sure the path is correct
 
 // This line is important for pdf.js to work correctly with bundlers like Webpack (used by Next.js)
@@ -54,49 +53,54 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
     const nextQuestion = () => { if (currentQuestionIndex < aiQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1); };
     const prevQuestion = () => { if (currentQuestionIndex > 0) setCurrentQuestionIndex(prev => prev - 1); };
 
-    const handleFileUpload = async (event) => {
-        const file = event.target.files[0];
-        if (!file || file.type !== 'application/pdf') {
-            setParseError('Please select a PDF file.');
-            return;
-        }
+const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file || file.type !== 'application/pdf') {
+        setParseError('Please select a PDF file.');
+        return;
+    }
+    setIsParsing(true);
+    setParseError('');
+    try {
+        // Dynamically import PDF.js only when needed
+        const pdfjsLib = await import('pdfjs-dist');
+        
+        // IMPORTANT: Use the ES modules version
+        const pdfjs = await import('pdfjs-dist/build/pdf');
+        const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
+        
+        // Set the worker path
+        pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-        setIsParsing(true);
-        setParseError('');
-
-        try {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const typedArray = new Uint8Array(e.target.result);
-                const pdf = await pdfjsLib.getDocument(typedArray).promise;
-                let fullText = '';
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    fullText += textContent.items.map(item => item.str).join(' ');
-                }
-                
-                const parsedData = await aiService.parseCvText(fullText);
-                
-                // Merge parsed data into the main cvData state
-                setCvData(prevData => ({
-                    ...prevData,
-                    personalInformation: { ...prevData.personalInformation, ...parsedData.personalInformation },
-                    summary: parsedData.summary || prevData.summary,
-                    experience: parsedData.experience?.length > 0 ? parsedData.experience : prevData.experience,
-                    education: parsedData.education?.length > 0 ? parsedData.education : prevData.education,
-                    skills: { ...prevData.skills, ...parsedData.skills },
-                }));
-            };
-            reader.readAsArrayBuffer(file);
-        } catch (error) {
-            console.error(error);
-            setParseError(error.message || 'Could not read or parse the PDF.');
-        } finally {
-            setIsParsing(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-    };
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const typedArray = new Uint8Array(e.target.result);
+            const pdf = await pdfjs.getDocument(typedArray).promise;
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                fullText += textContent.items.map(item => item.str).join(' ');
+            }
+            const parsedData = await aiService.parseCvText(fullText);
+            setCvData(prevData => ({
+                ...prevData,
+                personalInformation: { ...prevData.personalInformation, ...parsedData.personalInformation },
+                summary: parsedData.summary || prevData.summary,
+                experience: parsedData.experience?.length > 0 ? parsedData.experience : prevData.experience,
+                education: parsedData.education?.length > 0 ? parsedData.education : prevData.education,
+                skills: { ...prevData.skills, ...parsedData.skills },
+            }));
+        };
+        reader.readAsArrayBuffer(file);
+    } catch (error) {
+        console.error(error);
+        setParseError(error.message || 'Could not read or parse the PDF.');
+    } finally {
+        setIsParsing(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+};
 
     const currentQuestion = aiQuestions[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / aiQuestions.length) * 100;
