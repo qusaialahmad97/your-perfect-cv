@@ -20,27 +20,8 @@ const BulletList = ({ content }) => {
   if (!content || content === '<p></p>' || content === '<p><br></p>') {
       return null;
   }
-
-  const isLikelyHtml = /<\/?(p|div|ul|ol|li|strong|em|u|a|br|span|h[1-6])[\s>]/i.test(content);
-
-  if (isLikelyHtml) {
-    return <div dangerouslySetInnerHTML={{ __html: content }} />;
-  } else {
-    const items = String(content)
-      .split('\n')
-      .filter(line => line.trim() !== '')
-      .map(line => line.replace(/^[-•*]\s*/, '').trim());
-
-    if (items.length === 0) return null;
-
-    return (
-      <ul className="bullet-list-plain">
-        {items.map((item, i) => (
-          <li key={i}>{item}</li>
-        ))}
-      </ul>
-    );
-  }
+  // Safely render content that is already HTML
+  return <div dangerouslySetInnerHTML={{ __html: content }} />;
 };
 
 // Main PrintableCv component, wrapped with forwardRef
@@ -48,7 +29,7 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
   if (!data) {
     return (
       <div ref={ref} className="cv-container printable-content">
-        <p>No CV data available to print.</p>
+        <p>No CV data available to display.</p>
       </div>
     );
   }
@@ -86,7 +67,7 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
     if (personalInformation.email) parts.push(personalInformation.email);
     if (personalInformation.phone) parts.push(personalInformation.phone);
     if (personalInformation.linkedin) parts.push(personalInformation.linkedin);
-    return parts.length > 0 ? parts.join(' | ') : personalInformation.contact || '';
+    return parts.length > 0 ? parts.join(' | ') : '';
   };
 
   const formatLocation = () => {
@@ -105,26 +86,27 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
           </Section>
         );
       
-      // --- MODIFIED: Work Experience section now respects visibility flags ---
       case 'experience':
         return experience.length > 0 && (
           <Section title="Work Experience" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
             {experience.map((exp, i) => (
-              <div key={i} className="entry">
+              <div key={exp.id || i} className="entry">
                 <div className="entry-header">
                   <h3>
-                    {exp.jobTitle || exp.title}
-                    {exp.company && ` at ${exp.company}`}
+                    {/* FIXED: Use 'role' as primary, fallback to old 'jobTitle' */}
+                    {exp.role || exp.jobTitle}
+                    {/* FIXED: Display company and new 'location' field */}
+                    {exp.company && ` at ${exp.company}${exp.location ? `, ${exp.location}` : ''}`}
                   </h3>
-                  {(exp.duration || exp.startDate || exp.endDate) && (
+                  {/* FIXED: Use 'startDate' and 'endDate' */}
+                  {(exp.startDate || exp.endDate) && (
                     <span className="duration">
-                      {exp.duration || `${exp.startDate || ''} - ${exp.endDate || 'Present'}`}
+                      {`${exp.startDate || ''} - ${exp.endDate || 'Present'}`}
                     </span>
                   )}
                 </div>
 
-                {/* --- THIS IS THE KEY CHANGE --- */}
-                {/* Render Responsibilities only if showResponsibilities is not false */}
+                {/* This part was already correct and respects the visibility flags */}
                 {(exp.showResponsibilities !== false && exp.responsibilities) && (
                   <>
                     <h4>Responsibilities:</h4>
@@ -132,8 +114,6 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
                   </>
                 )}
 
-                {/* --- THIS IS THE KEY CHANGE --- */}
-                {/* Render Achievements only if showAchievements is not false */}
                 {(exp.showAchievements !== false && exp.achievements) && (
                   <>
                     <h4>Achievements:</h4>
@@ -145,7 +125,6 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
           </Section>
         );
 
-      // --- The rest of the sections are unchanged ---
       case 'education':
         return education.length > 0 && (
           <Section title="Education" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
@@ -154,17 +133,17 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
                 <div className="entry-header">
                   <h3>
                     {edu.degree}
-                    {edu.institution && ` - ${edu.institution}`}
-                    {!edu.institution && edu.university && ` - ${edu.university}`}
+                     {/* FIXED: Display institution and new 'location' field */}
+                    {edu.institution && ` - ${edu.institution}${edu.location ? `, ${edu.location}` : ''}`}
                   </h3>
-                  {(edu.gradDate || edu.year) && <span className="date">{edu.gradDate || edu.year}</span>}
+                   {/* FIXED: Use 'graduationYear' as primary, with fallbacks for old data */}
+                  {(edu.graduationYear || edu.gradDate || edu.year) && <span className="date">{edu.graduationYear || edu.gradDate || edu.year}</span>}
                 </div>
-                {edu.gpa && <p className="gpa">GPA: {edu.gpa}</p>}
-                {edu.field && <p className="field-of-study">{edu.field}</p>}
               </div>
             ))}
           </Section>
         );
+
       case 'projects':
         return projects.length > 0 && (
           <Section title="Projects" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
@@ -179,6 +158,7 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
             ))}
           </Section>
         );
+        
       case 'skills':
         return (skills.technical || skills.soft) && (
           <Section title="Skills" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
@@ -186,27 +166,21 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
             {skills.soft && <div className="skills-group"><strong>Soft:</strong> {skills.soft}</div>}
           </Section>
         );
+
       case 'languages': 
         return languages && (
           <Section title="Languages" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
             <p className="languages-text">{languages}</p>
           </Section>
         );
+
       case 'references':
         return references.length > 0 && (
           <Section title="References" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
-            <ul className="bullet-list-plain">
-              {references.map((refItem, i) => (
-                <li key={i}>
-                  {refItem.name && <p className="font-semibold">{refItem.name}</p>}
-                  {refItem.position && <p className="text-sm text-gray-700">{refItem.position}</p>}
-                  {refItem.phone && <p className="text-sm text-gray-700">Phone: {refItem.phone}</p>}
-                </li>
-              ))}
-            </ul>
             <p className="mt-2 text-xs text-gray-600">References available upon request.</p>
           </Section>
         );
+        
       case 'awards':
         return awards.length > 0 && (
           <Section title="Awards & Recognitions" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
@@ -221,6 +195,7 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
             </ul>
           </Section>
         );
+        
       case 'courses':
         return courses.length > 0 && (
           <Section title="Courses" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
@@ -234,6 +209,7 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
             </ul>
           </Section>
         );
+        
       case 'certifications':
         return certifications.length > 0 && (
           <Section title="Certifications" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
@@ -247,11 +223,13 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
             </ul>
           </Section>
         );
+        
       case 'customSections':
         return customSections.length > 0 && (
           <>
             {customSections.map((item, i) => (
-              <Section key={i} title={item.header || "Custom Section"} primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
+              item.header && item.content &&
+              <Section key={i} title={item.header} primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
                 <div dangerouslySetInnerHTML={{ __html: item.content }} />
               </Section>
             ))}

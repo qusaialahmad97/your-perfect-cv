@@ -413,17 +413,45 @@ const CvBuilder = () => {
                 }
                 return `<p>${text}</p>`;
             };
+
+            // --- THIS IS THE FIX ---
+            // Merge the original data with the AI-generated data instead of replacing it.
+            const originalExperience = cvData.experience || [];
+            const aiGeneratedExperience = (parsedJson.experience || []).map((aiExp, index) => ({
+                ...(originalExperience[index] || {}), // Keep original facts like location, dates
+                ...aiExp, // Overwrite with AI-generated content like role, responsibilities
+                responsibilities: ensureHtml(aiExp.responsibilities || ''),
+                achievements: ensureHtml(aiExp.achievements || '')
+            }));
+
+            const originalEducation = cvData.education || [];
+            const aiGeneratedEducation = (parsedJson.education || []).map((aiEdu, index) => ({
+                ...(originalEducation[index] || {}), // Keep original facts like location
+                ...aiEdu // Overwrite with AI-generated content like degree
+            }));
+
             const updatedCvData = { 
-                ...cvData, ...parsedJson, 
+                ...cvData, 
+                ...parsedJson, 
                 personalInformation: { ...cvData.personalInformation, ...parsedJson.personalInformation },
-                summary: ensureHtml(parsedJson.summary || cvData.summary), 
-                experience: (parsedJson.experience || []).map(exp => ({ ...exp, responsibilities: ensureHtml(exp.responsibilities || ''), achievements: ensureHtml(exp.achievements || '') })),
+                summary: ensureHtml(parsedJson.summary || cvData.summary),
+                // Use the newly merged arrays
+                experience: aiGeneratedExperience,
+                education: aiGeneratedEducation,
                 projects: (parsedJson.projects || []).map(proj => ({ ...proj, description: ensureHtml(proj.description || '') })),
                 customSections: (parsedJson.customSections || []).map(section => ({ ...section, content: ensureHtml(section.content || '') })),
                 languages: parsedJson.languages || cvData.languages, 
-                references: parsedJson.references || [], awards: parsedJson.awards || [], courses: parsedJson.courses || [], certifications: parsedJson.certifications || [],
+                references: parsedJson.references || [], 
+                awards: parsedJson.awards || [], 
+                courses: parsedJson.courses || [], 
+                certifications: parsedJson.certifications || [],
             };
-            setCvData(updatedCvData); setMode('ai'); setIsAiGenerated(true); setAiFlowStep('editor'); 
+
+            setCvData(updatedCvData); 
+            setMode('ai'); 
+            setIsAiGenerated(true); 
+            setAiFlowStep('editor'); 
+
         } catch (error) {
             setErrorMessage(`Error generating CV: ${error.message}`);
         } finally {
@@ -501,13 +529,6 @@ const CvBuilder = () => {
             )}
             <main className="mx-auto">{renderContent()}</main>
 
-            {/*
-              --- PRINTING FIX APPLIED HERE ---
-              1. The wrapper div now has the `printable-content` class.
-                 This class is targeted by the @media print CSS rules.
-              2. The inline style is updated to be more robust for hiding
-                 the element on screen, preventing any interaction or layout shifts.
-            */}
             <div className="printable-content" style={{ position: 'absolute', zIndex: -1, opacity: 0, height: 0, overflow: 'hidden' }}>
                 {cvData && (<PrintableCv ref={componentToPrintRef} data={cvData} primaryColor={primaryColor} settings={cvData.settings} />)}
             </div>
