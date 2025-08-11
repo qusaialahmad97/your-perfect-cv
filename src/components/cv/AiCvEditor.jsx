@@ -9,7 +9,7 @@ const MagicWandButton = ({ onClick, isLoading }) => (
   <button
     onClick={onClick}
     disabled={isLoading}
-    className="absolute top-1 right-1 p-1 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 disabled:opacity-50 disabled:animate-pulse"
+    className="absolute top-1 right-1 p-1 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
     title="Refine with AI"
   >
     {isLoading ? (
@@ -71,7 +71,6 @@ const ReorderSectionsModal = ({ isOpen, onClose, currentOrder, onSaveOrder }) =>
   const SECTION_NAMES = { summary: 'Professional Summary', experience: 'Work Experience', education: 'Education', projects: 'Projects', skills: 'Skills', languages: 'Languages', references: 'References', awards: 'Awards & Recognitions', courses: 'Courses', certifications: 'Certifications', customSections: 'Custom Sections' };
   
   React.useEffect(() => { setOrderedSections(currentOrder); }, [currentOrder]);
-
   const handleDragStart = (e, index) => { draggedItemIndex.current = index; e.currentTarget.classList.add('bg-blue-100', 'shadow-md'); };
   const handleDragOver = (e) => e.preventDefault();
   const handleDrop = (e, targetIndex) => { e.currentTarget.classList.remove('border-t-2', 'border-blue-500'); const draggedIndex = draggedItemIndex.current; if (draggedIndex === null || draggedIndex === targetIndex) return; const newOrder = [...orderedSections]; const [removed] = newOrder.splice(draggedIndex, 1); newOrder.splice(targetIndex, 0, removed); setOrderedSections(newOrder); draggedItemIndex.current = null; };
@@ -121,6 +120,47 @@ const ReorderItemsModal = ({ isOpen, onClose, onSave, items, title, itemTitleKey
   );
 };
 
+// --- NEW Component for the Refine with Prompt Modal ---
+const RefinePromptModal = ({ isOpen, onClose, onRefine, isLoading }) => {
+    const [prompt, setPrompt] = useState('');
+    const quickPrompts = ["Make it more professional", "Shorten this", "Use stronger action verbs", "Rephrase as bullet points"];
+
+    const handleRefineClick = () => {
+        onRefine(prompt);
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+                <h2 className="text-2xl font-bold mb-2">Refine with AI</h2>
+                <p className="text-gray-600 mb-4">Give the AI a specific instruction, or leave it blank for a general improvement.</p>
+                <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="e.g., Shorten this to three bullet points..."
+                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 resize-y"
+                    rows="3"
+                />
+                <div className="mt-3 mb-6 flex flex-wrap gap-2">
+                    {quickPrompts.map(p => (
+                        <button key={p} onClick={() => setPrompt(p)} className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300">
+                            {p}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex justify-end space-x-4">
+                    <button onClick={onClose} disabled={isLoading} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 disabled:opacity-50">Cancel</button>
+                    <button onClick={handleRefineClick} disabled={isLoading} className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:animate-pulse">
+                        {isLoading ? 'Refining...' : '✨ Refine'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 // --- Main Editor Component ---
 const AiCvEditor = ({ cvData, setCvData }) => {
@@ -128,14 +168,10 @@ const AiCvEditor = ({ cvData, setCvData }) => {
   const [loadingStates, setLoadingStates] = useState({});
   const primaryColor = cvData.settings?.primaryColor || '#2563EB';
   const [isSectionReorderModalOpen, setIsSectionReorderModalOpen] = useState(false);
-  const [itemReorderModal, setItemReorderModal] = useState({
-      isOpen: false,
-      sectionKey: null,
-      title: '',
-      items: [],
-      itemTitleKey: '',
-      itemSubtitleKey: '',
-  });
+  const [itemReorderModal, setItemReorderModal] = useState({ isOpen: false, sectionKey: null, title: '', items: [], itemTitleKey: '', itemSubtitleKey: '' });
+
+  // --- NEW state for the refine prompt modal ---
+  const [refineModalState, setRefineModalState] = useState({ isOpen: false, fieldName: null, currentValue: '', updateFn: null, isRichText: false });
 
   const jobKeywords = useMemo(() => {
     if (!cvData.aiHelpers?.jobDescription) return [];
@@ -163,11 +199,20 @@ const AiCvEditor = ({ cvData, setCvData }) => {
     return text.split('\n').filter(line => line.trim() !== '').map(line => `<p>${line}</p>`).join('');
   };
 
-  const handleRefine = async (fieldName, currentValue, updateFn, isRichText = false) => {
+  // --- MODIFIED: This function now just opens the modal ---
+  const handleOpenRefineModal = (fieldName, currentValue, updateFn, isRichText = false) => {
     if (!currentValue) return;
+    setRefineModalState({ isOpen: true, fieldName, currentValue, updateFn, isRichText });
+  };
+
+  // --- NEW: This function contains the logic to call the AI service ---
+  const handleExecuteRefine = async (prompt) => {
+    const { fieldName, currentValue, updateFn, isRichText } = refineModalState;
+    if (!currentValue) return;
+
     setLoadingStates(prev => ({ ...prev, [fieldName]: true }));
     try {
-      const refinedText = await aiService.refineText(currentValue, cvData.aiHelpers?.jobDescription);
+      const refinedText = await aiService.refineText(currentValue, cvData.aiHelpers?.jobDescription, prompt);
       const finalValue = isRichText ? plainTextToHtml(refinedText) : refinedText;
       updateFn(finalValue);
     } catch (error) {
@@ -175,6 +220,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
       alert(`Error refining text: ${error.message}`);
     } finally {
       setLoadingStates(prev => ({ ...prev, [fieldName]: false }));
+      setRefineModalState({ isOpen: false, fieldName: null, currentValue: '', updateFn: null, isRichText: false }); // Close and reset modal state
     }
   };
   
@@ -203,17 +249,12 @@ const AiCvEditor = ({ cvData, setCvData }) => {
   const removeDynamicEntry = (index, section) => setCvData(prev => ({ ...prev, [section]: (prev[section] || []).filter((_, i) => i !== index) }));
   const handleJobDescriptionChange = (e) => setCvData(prev => ({...prev, aiHelpers: {...prev.aiHelpers, jobDescription: e.target.value }}));
   const handleSaveSectionOrder = (newOrder) => setCvData(prev => ({ ...prev, settings: { ...prev.settings, sectionOrder: newOrder } }));
-  const handleSaveItemOrder = (sectionKey, newItems) => {
-      setCvData(prev => ({
-          ...prev,
-          [sectionKey]: newItems
-      }));
-  };
+  const handleSaveItemOrder = (sectionKey, newItems) => { setCvData(prev => ({ ...prev, [sectionKey]: newItems })); };
 
   const sectionComponents = useMemo(() => ({
     summary: (
       <EditorSection title="Professional Summary" primaryColor={primaryColor}>
-        <EditableField label="Summary" name="summary" isRichText value={cvData.summary} onChange={handleSummaryChange} onRefine={() => handleRefine('summary', cvData.summary, (v) => setCvData(p => ({...p, summary: v})), true)} isRefining={loadingStates['summary']} />
+        <EditableField label="Summary" name="summary" isRichText value={cvData.summary} onChange={handleSummaryChange} onRefine={() => handleOpenRefineModal('summary', cvData.summary, (v) => setCvData(p => ({...p, summary: v})), true)} isRefining={loadingStates['summary']} />
       </EditorSection>
     ),
     experience: (
@@ -223,17 +264,15 @@ const AiCvEditor = ({ cvData, setCvData }) => {
              <button onClick={() => removeDynamicEntry(index, 'experience')} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
              <EditableField label="Job Title" name="role" value={exp.role || exp.jobTitle || ''} onChange={e => handleDynamicChange(e, index, 'experience')} />
              <EditableField label="Company" name="company" value={exp.company || ''} onChange={e => handleDynamicChange(e, index, 'experience')} />
-             {/* FIXED: Ensured value is always a string for the input */}
              <EditableField label="Location" name="location" value={exp.location || ''} onChange={e => handleDynamicChange(e, index, 'experience')} />
              <div className="flex gap-4">
-                {/* FIXED: Ensured value is always a string for the input */}
                 <EditableField label="Start Date" name="startDate" value={exp.startDate || ''} onChange={e => handleDynamicChange(e, index, 'experience')} />
                 <EditableField label="End Date" name="endDate" value={exp.endDate || ''} onChange={e => handleDynamicChange(e, index, 'experience')} />
              </div>
              <div className="flex justify-between items-center"><label className="block text-sm font-bold text-gray-600 mb-1">Responsibilities</label><ToggleVisibilityButton isVisible={exp.showResponsibilities !== false} onClick={() => toggleSectionVisibility(index, 'experience', 'showResponsibilities')} /></div>
-             {(exp.showResponsibilities !== false) && (<EditableField label="" name="responsibilities" isRichText value={exp.responsibilities} onChange={e => handleDynamicChange(e, index, 'experience')} onRefine={() => handleRefine(`expResp-${index}`, exp.responsibilities, v => handleDynamicChange({target: {name:'responsibilities', value:v}}, index, 'experience'), true)} isRefining={loadingStates[`expResp-${index}`]} />)}
+             {(exp.showResponsibilities !== false) && (<EditableField label="" name="responsibilities" isRichText value={exp.responsibilities} onChange={e => handleDynamicChange(e, index, 'experience')} onRefine={() => handleOpenRefineModal(`expResp-${index}`, exp.responsibilities, v => handleDynamicChange({target: {name:'responsibilities', value:v}}, index, 'experience'), true)} isRefining={loadingStates[`expResp-${index}`]} />)}
              <div className="flex justify-between items-center mt-2"><label className="block text-sm font-bold text-gray-600 mb-1">Achievements</label><ToggleVisibilityButton isVisible={exp.showAchievements !== false} onClick={() => toggleSectionVisibility(index, 'experience', 'showAchievements')} /></div>
-             {(exp.showAchievements !== false) && (<EditableField label="" name="achievements" isRichText value={exp.achievements} onChange={e => handleDynamicChange(e, index, 'experience')} onRefine={() => handleRefine(`expAchv-${index}`, exp.achievements, v => handleDynamicChange({target: {name:'achievements', value:v}}, index, 'experience'), true)} isRefining={loadingStates[`expAchv-${index}`]} />)}
+             {(exp.showAchievements !== false) && (<EditableField label="" name="achievements" isRichText value={exp.achievements} onChange={e => handleDynamicChange(e, index, 'experience')} onRefine={() => handleOpenRefineModal(`expAchv-${index}`, exp.achievements, v => handleDynamicChange({target: {name:'achievements', value:v}}, index, 'experience'), true)} isRefining={loadingStates[`expAchv-${index}`]} />)}
              {(!exp.responsibilities || exp.responsibilities === '<p></p>') && (exp.role || exp.jobTitle) && (<button onClick={() => handleGenerateIdeas(index, exp.role || exp.jobTitle)} disabled={loadingStates[`experienceIdeas-${index}`]} className="w-full text-xs py-1 px-2 mt-2 text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-md">{loadingStates[`experienceIdeas-${index}`] ? 'Generating Ideas...' : '🤖 Generate Responsibility Ideas'}</button>)}
           </div>
         ))}
@@ -254,14 +293,14 @@ const AiCvEditor = ({ cvData, setCvData }) => {
         <button onClick={() => addDynamicEntry('education')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Education</button>
       </EditorSection>
     ),
-    projects: ( <EditorSection title="Projects" primaryColor={primaryColor}> {(cvData.projects || []).map((project, index) => ( <div key={project.id || index} className="p-3 border-b last:border-b-0 relative bg-white rounded-md mb-3"> <button onClick={() => removeDynamicEntry(index, 'projects')} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button> <EditableField label="Project Name" name="name" value={project.name} onChange={e => handleDynamicChange(e, index, 'projects')} /> <EditableField label="Technologies Used" name="technologies" value={project.technologies} onChange={e => handleDynamicChange(e, index, 'projects')} /> <EditableField label="Description" name="description" isRichText value={project.description} onChange={e => handleDynamicChange(e, index, 'projects')} onRefine={() => handleRefine(`projDesc-${index}`, project.description, v => handleDynamicChange({target: {name:'description', value:v}}, index, 'projects'), true)} isRefining={loadingStates[`projDesc-${index}`]}/> </div> ))} <button onClick={() => addDynamicEntry('projects')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Project</button> </EditorSection> ),
-    skills: ( <EditorSection title="Skills" primaryColor={primaryColor}> <EditableField label="Technical Skills" name="technical" type="textarea" value={cvData.skills?.technical} onChange={handleSkillsChange} onRefine={() => handleRefine('techSkills', cvData.skills?.technical, v => handleSkillsChange({target: {name:'technical', value:v}}))} isRefining={loadingStates['techSkills']} /> <EditableField label="Soft Skills" name="soft" type="textarea" value={cvData.skills?.soft} onChange={handleSkillsChange} onRefine={() => handleRefine('softSkills', cvData.skills?.soft, v => handleSkillsChange({target: {name:'soft', value:v}}))} isRefining={loadingStates['softSkills']} /> </EditorSection> ),
+    projects: ( <EditorSection title="Projects" primaryColor={primaryColor}> {(cvData.projects || []).map((project, index) => ( <div key={project.id || index} className="p-3 border-b last:border-b-0 relative bg-white rounded-md mb-3"> <button onClick={() => removeDynamicEntry(index, 'projects')} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button> <EditableField label="Project Name" name="name" value={project.name} onChange={e => handleDynamicChange(e, index, 'projects')} /> <EditableField label="Technologies Used" name="technologies" value={project.technologies} onChange={e => handleDynamicChange(e, index, 'projects')} /> <EditableField label="Description" name="description" isRichText value={project.description} onChange={e => handleDynamicChange(e, index, 'projects')} onRefine={() => handleOpenRefineModal(`projDesc-${index}`, project.description, v => handleDynamicChange({target: {name:'description', value:v}}, index, 'projects'), true)} isRefining={loadingStates[`projDesc-${index}`]}/> </div> ))} <button onClick={() => addDynamicEntry('projects')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Project</button> </EditorSection> ),
+    skills: ( <EditorSection title="Skills" primaryColor={primaryColor}> <EditableField label="Technical Skills" name="technical" type="textarea" value={cvData.skills?.technical} onChange={handleSkillsChange} onRefine={() => handleOpenRefineModal('techSkills', cvData.skills?.technical, v => handleSkillsChange({target: {name:'technical', value:v}}))} isRefining={loadingStates['techSkills']} /> <EditableField label="Soft Skills" name="soft" type="textarea" value={cvData.skills?.soft} onChange={handleSkillsChange} onRefine={() => handleOpenRefineModal('softSkills', cvData.skills?.soft, v => handleSkillsChange({target: {name:'soft', value:v}}))} isRefining={loadingStates['softSkills']} /> </EditorSection> ),
     languages: ( <EditorSection title="Languages" primaryColor={primaryColor}> <EditableField label="Languages" name="languages" type="textarea" value={cvData.languages} onChange={handleLanguagesChange} /> </EditorSection> ),
     references: ( <EditorSection title="References" primaryColor={primaryColor}> {(cvData.references || []).map((ref, index) => ( <div key={ref.id || index} className="p-3 border-b last:border-b-0 relative bg-white rounded-md mb-3"> <button onClick={() => removeDynamicEntry(index, 'references')} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button> <EditableField label="Name" name="name" value={ref.name} onChange={e => handleDynamicChange(e, index, 'references')} /> <EditableField label="Position" name="position" value={ref.position} onChange={e => handleDynamicChange(e, index, 'references')} /> <EditableField label="Phone Number" name="phone" value={ref.phone} onChange={e => handleDynamicChange(e, index, 'references')} /> </div> ))} <button onClick={() => addDynamicEntry('references', { name: '', phone: '', position: '' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Reference</button> </EditorSection> ),
     awards: ( <EditorSection title="Awards & Recognitions" primaryColor={primaryColor}> {(cvData.awards || []).map((award, index) => ( <div key={award.id || index} className="p-3 border-b last:border-b-0 relative bg-white rounded-md mb-3"> <button onClick={() => removeDynamicEntry(index, 'awards')} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button> <EditableField label="Title" name="title" value={award.title} onChange={e => handleDynamicChange(e, index, 'awards')} /> <EditableField label="Issuer (Optional)" name="issuer" value={award.issuer} onChange={e => handleDynamicChange(e, index, 'awards')} /> <EditableField label="Year (Optional)" name="year" value={award.year} onChange={e => handleDynamicChange(e, index, 'awards')} /> <EditableField label="Description (Optional)" name="description" type="textarea" rows="2" value={award.description} onChange={e => handleDynamicChange(e, index, 'awards')} /> </div> ))} <button onClick={() => addDynamicEntry('awards', { title: '', issuer: '', year: '', description: '' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Award</button> </EditorSection> ),
     courses: ( <EditorSection title="Courses" primaryColor={primaryColor}> {(cvData.courses || []).map((course, index) => ( <div key={course.id || index} className="p-3 border-b last:border-b-0 relative bg-white rounded-md mb-3"> <button onClick={() => removeDynamicEntry(index, 'courses')} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button> <EditableField label="Title" name="title" value={course.title} onChange={e => handleDynamicChange(e, index, 'courses')} /> <EditableField label="Institution (Optional)" name="institution" value={course.institution} onChange={e => handleDynamicChange(e, index, 'courses')} /> <EditableField label="Year (Optional)" name="year" value={course.year} onChange={e => handleDynamicChange(e, index, 'courses')} /> </div> ))} <button onClick={() => addDynamicEntry('courses', { title: '', institution: '', year: '' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Course</button> </EditorSection> ),
     certifications: ( <EditorSection title="Certifications" primaryColor={primaryColor}> {(cvData.certifications || []).map((cert, index) => ( <div key={cert.id || index} className="p-3 border-b last:border-b-0 relative bg-white rounded-md mb-3"> <button onClick={() => removeDynamicEntry(index, 'certifications')} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button> <EditableField label="Title" name="title" value={cert.title} onChange={e => handleDynamicChange(e, index, 'certifications')} /> <EditableField label="Issuing Body (Optional)" name="issuingBody" value={cert.issuingBody} onChange={e => handleDynamicChange(e, index, 'certifications')} /> <EditableField label="Year (Optional)" name="year" value={cert.year} onChange={e => handleDynamicChange(e, index, 'certifications')} /> </div> ))} <button onClick={() => addDynamicEntry('certifications', { title: '', issuingBody: '', year: '' })} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Certification</button> </EditorSection> ),
-    customSections: ( <EditorSection title="Custom Sections" primaryColor={primaryColor}> {(cvData.customSections || []).map((section, index) => ( <div key={section.id || index} className="p-3 border-b last:border-b-0 relative bg-white rounded-md mb-3"> <button onClick={() => removeDynamicEntry(index, 'customSections')} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button> <EditableField label="Header" name="header" value={section.header} onChange={e => handleDynamicChange(e, index, 'customSections')} /> <EditableField label="Content" name="content" isRichText value={section.content} onChange={e => handleDynamicChange(e, index, 'customSections')} onRefine={() => handleRefine(`custCont-${index}`, section.content, v => handleDynamicChange({target: {name:'content', value:v}}, index, 'customSections'), true)} isRefining={loadingStates[`custCont-${index}`]}/> </div> ))} <button onClick={() => addDynamicEntry('customSections')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Custom Section</button> </EditorSection> )
+    customSections: ( <EditorSection title="Custom Sections" primaryColor={primaryColor}> {(cvData.customSections || []).map((section, index) => ( <div key={section.id || index} className="p-3 border-b last:border-b-0 relative bg-white rounded-md mb-3"> <button onClick={() => removeDynamicEntry(index, 'customSections')} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button> <EditableField label="Header" name="header" value={section.header} onChange={e => handleDynamicChange(e, index, 'customSections')} /> <EditableField label="Content" name="content" isRichText value={section.content} onChange={e => handleDynamicChange(e, index, 'customSections')} onRefine={() => handleOpenRefineModal(`custCont-${index}`, section.content, v => handleDynamicChange({target: {name:'content', value:v}}, index, 'customSections'), true)} isRefining={loadingStates[`custCont-${index}`]}/> </div> ))} <button onClick={() => addDynamicEntry('customSections')} className="w-full mt-2 flex justify-center py-2 px-4 text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">+ Add Custom Section</button> </EditorSection> )
   }), [cvData, loadingStates, primaryColor]);
 
   return (
@@ -315,6 +354,13 @@ const AiCvEditor = ({ cvData, setCvData }) => {
         title={itemReorderModal.title}
         itemTitleKey={itemReorderModal.itemTitleKey}
         itemSubtitleKey={itemReorderModal.itemSubtitleKey}
+      />
+      {/* --- NEW: Render the Refine Prompt Modal --- */}
+      <RefinePromptModal
+        isOpen={refineModalState.isOpen}
+        onClose={() => setRefineModalState({ isOpen: false, fieldName: null, currentValue: '', updateFn: null, isRichText: false })}
+        onRefine={handleExecuteRefine}
+        isLoading={loadingStates[refineModalState.fieldName]}
       />
     </div>
   );

@@ -128,9 +128,36 @@ The structure must be:
     }
   },
 
-  async refineText(text, jobDescription = '') {
-    const context = jobDescription ? `Keep the following job description in mind for keywords: "${jobDescription}"` : '';
-    const prompt = `Rewrite the following resume text to be more professional and impactful. Use strong action verbs. Return only the rewritten text, with no extra commentary. ${context}\n\nText to rewrite: "${text}"`;
+  // --- THIS IS THE MODIFIED FUNCTION ---
+  async refineText(text, jobDescription = '', userPrompt = '') {
+    // Determine the main instruction for the AI.
+    // If the user provides a prompt, use it. Otherwise, use a default instruction.
+    const instruction = userPrompt 
+      ? `Follow the user's specific instruction: "${userPrompt}"` 
+      : 'Perform a general improvement: make the text more professional, concise, and impactful for a CV. Use strong action verbs.';
+
+    // Provide context about the job description, if available.
+    const jobContext = jobDescription 
+      ? `For context, here is the job description the user is applying for. Use it for keywords and tailoring: "${jobDescription}"` 
+      : 'No job description was provided.';
+
+    // Construct the final, detailed prompt.
+    const prompt = `
+      You are an expert CV writer and career coach. Your task is to rewrite a piece of text for a resume.
+      
+      **Instruction:**
+      ${instruction}
+
+      **Job Context:**
+      ${jobContext}
+
+      **Original Text to Rewrite:**
+      "${text}"
+
+      Return only the rewritten text, with no extra commentary, headers, or explanations.
+    `;
+    
+    // Call the AI with the new, comprehensive prompt.
     return await _callAI(prompt, 0.4);
   },
 
