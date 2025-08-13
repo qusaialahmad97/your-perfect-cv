@@ -207,13 +207,23 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
 
 // --- The Parent CvBuilder Component ---
 const CvBuilder = () => {
+    // --- TEMPLATE DEFINITIONS ---
+    // The original 6 templates plus 6 new ones have been added here.
     const cvTemplates = [
+        // Original Templates
         { id: 'modern', name: 'Modern Minimalist', imageUrl: '/images/templates/modern.jpg', defaultSettings: { primaryColor: '#007BFF', dividerColor: '#e0e0e0', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Inter, sans-serif' } },
         { id: 'classic', name: 'Classic Professional', imageUrl: '/images/templates/classic.jpg', defaultSettings: { primaryColor: '#333333', dividerColor: '#cccccc', paragraphFontSize: '10.5pt', headerFontSize: '13.5pt', lineHeight: '1.5', fontFamily: 'Merriweather, serif' } },
         { id: 'elegant', name: 'Elegant Serenity', imageUrl: '/images/templates/elegant.jpg', defaultSettings: { primaryColor: '#8E44AD', dividerColor: '#d8bfd8', paragraphFontSize: '11pt', headerFontSize: '15pt', lineHeight: '1.4', fontFamily: 'Open Sans, sans-serif' } },
         { id: 'bold', name: 'Bold & Impactful', imageUrl: '/images/templates/professional.jpg', defaultSettings: { primaryColor: '#D9534F', dividerColor: '#f2dede', paragraphFontSize: '12pt', headerFontSize: '16pt', lineHeight: '1.3', fontFamily: 'Montserrat, sans-serif' } },
         { id: 'creative', name: 'Creative Flair', imageUrl: '/images/templates/creative.jpg', defaultSettings: { primaryColor: '#28A745', dividerColor: '#d4edda', paragraphFontSize: '10pt', headerFontSize: '13pt', lineHeight: '1.6', fontFamily: 'Lato, sans-serif' } },
-        { id: 'minimalist', name: 'Clean & Simple', imageUrl: '/images/templates/minimalist.jpg', defaultSettings: { primaryColor: '#6C757D', dividerColor: '#e9ecef', paragraphFontSize: '11.5pt', headerFontSize: '14.5pt', lineHeight: '1.45', fontFamily: 'Roboto, sans-serif' } }
+        { id: 'minimalist', name: 'Clean & Simple', imageUrl: '/images/templates/minimalist.jpg', defaultSettings: { primaryColor: '#6C757D', dividerColor: '#e9ecef', paragraphFontSize: '11.5pt', headerFontSize: '14.5pt', lineHeight: '1.45', fontFamily: 'Roboto, sans-serif' } },
+        // New Templates
+        { id: 'tech', name: 'Tech Forward', imageUrl: '/images/templates/tech.jpg', defaultSettings: { primaryColor: '#00A8E8', dividerColor: '#dcf4f9', paragraphFontSize: '10.5pt', headerFontSize: '14pt', lineHeight: '1.5', fontFamily: 'Roboto, sans-serif' } },
+        { id: 'executive', name: 'Executive Suite', imageUrl: '/images/templates/executive.jpg', defaultSettings: { primaryColor: '#0D47A1', dividerColor: '#bbdefb', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Merriweather, serif' } },
+        { id: 'academic', name: 'Academic Scholar', imageUrl: '/images/templates/academic.jpg', defaultSettings: { primaryColor: '#800000', dividerColor: '#e0e0e0', paragraphFontSize: '12pt', headerFontSize: '15pt', lineHeight: '1.6', fontFamily: 'Lato, sans-serif' } },
+        { id: 'graphite', name: 'Graphite & Slate', imageUrl: '/images/templates/graphite.jpg', defaultSettings: { primaryColor: '#34495E', dividerColor: '#bdc3c7', paragraphFontSize: '11pt', headerFontSize: '14.5pt', lineHeight: '1.4', fontFamily: 'Montserrat, sans-serif' } },
+        { id: 'verdant', name: 'Verdant Green', imageUrl: '/images/templates/verdant.jpg', defaultSettings: { primaryColor: '#1E8449', dividerColor: '#d4efdf', paragraphFontSize: '11.5pt', headerFontSize: '15pt', lineHeight: '1.5', fontFamily: 'Open Sans, sans-serif' } },
+        { id: 'crimson', name: 'Crimson Bold', imageUrl: '/images/templates/crimson.jpg', defaultSettings: { primaryColor: '#C0392B', dividerColor: '#f5b7b1', paragraphFontSize: '11pt', headerFontSize: '16pt', lineHeight: '1.35', fontFamily: 'Inter, sans-serif' } }
     ];
 
     const getInitialCvData = (templateId = null) => {
@@ -414,20 +424,18 @@ const CvBuilder = () => {
                 return `<p>${text}</p>`;
             };
 
-            // --- THIS IS THE FIX ---
-            // Merge the original data with the AI-generated data instead of replacing it.
             const originalExperience = cvData.experience || [];
             const aiGeneratedExperience = (parsedJson.experience || []).map((aiExp, index) => ({
-                ...(originalExperience[index] || {}), // Keep original facts like location, dates
-                ...aiExp, // Overwrite with AI-generated content like role, responsibilities
+                ...(originalExperience[index] || {}),
+                ...aiExp,
                 responsibilities: ensureHtml(aiExp.responsibilities || ''),
                 achievements: ensureHtml(aiExp.achievements || '')
             }));
 
             const originalEducation = cvData.education || [];
             const aiGeneratedEducation = (parsedJson.education || []).map((aiEdu, index) => ({
-                ...(originalEducation[index] || {}), // Keep original facts like location
-                ...aiEdu // Overwrite with AI-generated content like degree
+                ...(originalEducation[index] || {}),
+                ...aiEdu
             }));
 
             const updatedCvData = { 
@@ -435,7 +443,6 @@ const CvBuilder = () => {
                 ...parsedJson, 
                 personalInformation: { ...cvData.personalInformation, ...parsedJson.personalInformation },
                 summary: ensureHtml(parsedJson.summary || cvData.summary),
-                // Use the newly merged arrays
                 experience: aiGeneratedExperience,
                 education: aiGeneratedEducation,
                 projects: (parsedJson.projects || []).map(proj => ({ ...proj, description: ensureHtml(proj.description || '') })),
