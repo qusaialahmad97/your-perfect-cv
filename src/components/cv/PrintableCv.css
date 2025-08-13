@@ -70,7 +70,7 @@
 /* Section styles */
 .cv-section {
   margin-bottom: 1.25rem;
-  page-break-inside: avoid;
+  /* CORRECT: This should NOT have page-break-inside: avoid */
 }
 
 .cv-section h2 {
@@ -89,12 +89,17 @@
 }
 
 /* Entry styles (for experience, education, etc.) */
-.entry {
+/* Renamed .entry to .cv-entry in the JSX, keeping .entry here for compatibility */
+.entry, .cv-entry {
   margin-bottom: 1rem;
-  page-break-inside: avoid;
+  /* --- FIX --- */
+  /* This rule was the primary cause of large white spaces. */
+  /* It is now removed to allow long entries to flow across pages. */
+  /* page-break-inside: avoid; */
+  /* break-inside: avoid; */
 }
 
-.entry:last-child {
+.entry:last-child, .cv-entry:last-child {
   margin-bottom: 0;
 }
 
@@ -121,7 +126,8 @@
 }
 
 /* Section-specific H4 for Achievements/Responsibilities headings */
-.cv-section .entry h4 {
+.cv-section .entry h4,
+.cv-section .cv-entry h4 {
   font-size: var(--paragraph-font-size, 11pt); /* Uses paragraph font size */
   font-weight: bold;
   margin-top: 0.5em;
@@ -232,6 +238,7 @@
 
 
 /* --- Template-Specific Overrides --- */
+/* (No changes in this section) */
 
 /* Modern Minimalist Template */
 .cv-container.template-modern .cv-header {
@@ -265,7 +272,6 @@
 .cv-container.template-modern .section-divider {
   display: none;
 }
-/* Apply to both native HTML ul and our plain-text-parsed lists */
 .cv-container.template-modern ul,
 .cv-container.template-modern .bullet-list-plain { 
   list-style-type: square;
@@ -340,7 +346,6 @@
     height: 0.5px;
     margin: 0.5rem 0 1.5rem 0;
 }
-/* Apply to both native HTML ul and our plain-text-parsed lists */
 .cv-container.template-elegant ul,
 .cv-container.template-elegant .bullet-list-plain {
     list-style-type: circle;
@@ -425,7 +430,6 @@
     margin: 0.5rem 0 1.5rem 0;
     border-radius: 2px;
 }
-/* Apply to both native HTML ul and our plain-text-parsed lists */
 .cv-container.template-creative ul,
 .cv-container.template-creative .bullet-list-plain {
     list-style-type: none;
@@ -489,7 +493,6 @@
     font-size: var(--paragraph-font-size, 11pt);
     color: #777;
 }
-/* Apply to both native HTML ul and our plain-text-parsed lists */
 .cv-container.template-minimalist ul,
 .cv-container.template-minimalist .bullet-list-plain {
     list-style-type: disc;
@@ -540,24 +543,25 @@
       background-color: var(--primary-color) !important;
   }
 
-
   /* Link handling for print */
   a {
     text-decoration: none;
     color: inherit;
   }
 
-  /* Prevent unwanted page breaks within sections and entries */
-  .cv-section, .entry {
-    page-break-inside: avoid;
+  /* --- FIX: THIS IS THE KEY CHANGE --- */
+  /* Allow sections and entries to break naturally across pages. */
+  .cv-section,
+  .cv-entry, .entry {
+    page-break-inside: auto; 
+    break-inside: auto;
   }
-
-  /* Prevent unwanted page breaks within dynamically generated HTML lists */
-  .cv-container ul, .cv-container ol {
-      page-break-inside: avoid;
-  }
+  
+  /* But, PREVENT individual list items (bullet points) from splitting in half. */
+  /* This prevents an ugly break in the middle of a sentence. */
   .cv-container li {
-      page-break-inside: avoid;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }
 

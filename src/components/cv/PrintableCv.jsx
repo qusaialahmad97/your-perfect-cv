@@ -16,11 +16,9 @@ const Section = ({ title, children, primaryColor, dividerColor }) => (
 
 // Helper component for rendering bulleted lists AND general HTML
 const BulletList = ({ content }) => {
-  // Check for null/undefined or empty HTML content before rendering
   if (!content || content === '<p></p>' || content === '<p><br></p>') {
       return null;
   }
-  // Safely render content that is already HTML
   return <div dangerouslySetInnerHTML={{ __html: content }} />;
 };
 
@@ -87,33 +85,26 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
         );
       
       case 'experience':
-        return experience.length > 0 && (
+        return experience && experience.length > 0 && (
           <Section title="Work Experience" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
             {experience.map((exp, i) => (
-              <div key={exp.id || i} className="entry">
+              <div key={exp.id || i} className="cv-entry">
                 <div className="entry-header">
                   <h3>
-                    {/* FIXED: Use 'role' as primary, fallback to old 'jobTitle' */}
                     {exp.role || exp.jobTitle}
-                    {/* FIXED: Display company and new 'location' field */}
                     {exp.company && ` at ${exp.company}${exp.location ? `, ${exp.location}` : ''}`}
                   </h3>
-                  {/* FIXED: Use 'startDate' and 'endDate' */}
-                  {(exp.startDate || exp.endDate) && (
-                    <span className="duration">
-                      {`${exp.startDate || ''} - ${exp.endDate || 'Present'}`}
-                    </span>
-                  )}
+                  <span className="duration">
+                    {/* FIXED: Handle older 'duration' field as a fallback */}
+                    {exp.duration || `${exp.startDate || ''} - ${exp.endDate || 'Present'}`}
+                  </span>
                 </div>
-
-                {/* This part was already correct and respects the visibility flags */}
                 {(exp.showResponsibilities !== false && exp.responsibilities) && (
                   <>
                     <h4>Responsibilities:</h4>
                     <BulletList content={exp.responsibilities} />
                   </>
                 )}
-
                 {(exp.showAchievements !== false && exp.achievements) && (
                   <>
                     <h4>Achievements:</h4>
@@ -126,18 +117,16 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
         );
 
       case 'education':
-        return education.length > 0 && (
+        return education && education.length > 0 && (
           <Section title="Education" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
             {education.map((edu, i) => (
-              <div key={i} className="entry">
+              <div key={i} className="cv-entry">
                 <div className="entry-header">
                   <h3>
                     {edu.degree}
-                     {/* FIXED: Display institution and new 'location' field */}
                     {edu.institution && ` - ${edu.institution}${edu.location ? `, ${edu.location}` : ''}`}
                   </h3>
-                   {/* FIXED: Use 'graduationYear' as primary, with fallbacks for old data */}
-                  {(edu.graduationYear || edu.gradDate || edu.year) && <span className="date">{edu.graduationYear || edu.gradDate || edu.year}</span>}
+                  <span className="date">{edu.graduationYear || edu.gradDate || edu.year}</span>
                 </div>
               </div>
             ))}
@@ -145,10 +134,10 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
         );
 
       case 'projects':
-        return projects.length > 0 && (
+        return projects && projects.length > 0 && (
           <Section title="Projects" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
             {projects.map((project, i) => (
-              <div key={i} className="entry">
+              <div key={i} className="cv-entry">
                 <div className="entry-header">
                   <h3>{project.name}</h3>
                   {project.technologies && <span className="tech">{project.technologies}</span>}
@@ -160,7 +149,7 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
         );
         
       case 'skills':
-        return (skills.technical || skills.soft) && (
+        return (skills && (skills.technical || skills.soft)) && (
           <Section title="Skills" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
             {skills.technical && <div className="skills-group"><strong>Technical:</strong> {skills.technical}</div>}
             {skills.soft && <div className="skills-group"><strong>Soft:</strong> {skills.soft}</div>}
@@ -175,18 +164,18 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
         );
 
       case 'references':
-        return references.length > 0 && (
+        return references && references.length > 0 && (
           <Section title="References" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
             <p className="mt-2 text-xs text-gray-600">References available upon request.</p>
           </Section>
         );
         
       case 'awards':
-        return awards.length > 0 && (
+        return awards && awards.length > 0 && (
           <Section title="Awards & Recognitions" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
             <ul className="bullet-list-plain">
               {awards.map((item, i) => (
-                <li key={i}>
+                <li key={i} className="cv-entry">
                   <p className="font-semibold">{item.title}</p>
                   {(item.year || item.issuer) && (<span className="text-sm text-gray-700">{item.issuer && <span>{item.issuer}</span>}{item.year && <span> ({item.year})</span>}</span>)}
                   {item.description && <p className="text-sm">{item.description}</p>}
@@ -197,11 +186,11 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
         );
         
       case 'courses':
-        return courses.length > 0 && (
+        return courses && courses.length > 0 && (
           <Section title="Courses" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
             <ul className="bullet-list-plain">
               {courses.map((item, i) => (
-                <li key={i}>
+                <li key={i} className="cv-entry">
                   <p className="font-semibold">{item.title}</p>
                   {(item.institution || item.year) && (<span className="text-sm text-gray-700">{item.institution && <span> - {item.institution}</span>}{item.year && <span> ({item.year})</span>}</span>)}
                 </li>
@@ -211,11 +200,11 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
         );
         
       case 'certifications':
-        return certifications.length > 0 && (
+        return certifications && certifications.length > 0 && (
           <Section title="Certifications" primaryColor={effectivePrimaryColor} dividerColor={effectiveDividerColor}>
             <ul className="bullet-list-plain">
               {certifications.map((item, i) => (
-                <li key={i}>
+                <li key={i} className="cv-entry">
                   <p className="font-semibold">{item.title}</p>
                   {(item.issuingBody || item.year) && (<span className="text-sm text-gray-700">{item.issuingBody && <span> - {item.issuingBody}</span>}{item.year && <span> ({item.year})</span>}</span>)}
                 </li>
@@ -225,7 +214,7 @@ const PrintableCv = forwardRef(({ data, primaryColor: propPrimaryColor, settings
         );
         
       case 'customSections':
-        return customSections.length > 0 && (
+        return customSections && customSections.length > 0 && (
           <>
             {customSections.map((item, i) => (
               item.header && item.content &&
