@@ -1,7 +1,24 @@
-import React, { useState, useMemo, useRef, memo } from 'react';
+import React, { useState, useMemo, useRef, memo, useCallback } from 'react';
 import { aiService } from '../../services/aiService';
 import PrintableCv from './PrintableCv';
 import RichTextEditor from '../common/RichTextEditor';
+import TemplateSelector from './TemplateSelector';
+
+// --- Template Definitions (brought in from the parent component) ---
+const cvTemplates = [
+    { id: 'modern', name: 'Modern Minimalist', imageUrl: '/images/templates/modern.jpg', defaultSettings: { primaryColor: '#007BFF', dividerColor: '#e0e0e0', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Inter, sans-serif' } },
+    { id: 'classic', name: 'Classic Professional', imageUrl: '/images/templates/classic.jpg', defaultSettings: { primaryColor: '#333333', dividerColor: '#cccccc', paragraphFontSize: '10.5pt', headerFontSize: '13.5pt', lineHeight: '1.5', fontFamily: 'Merriweather, serif' } },
+    { id: 'elegant', name: 'Elegant Serenity', imageUrl: '/images/templates/elegant.jpg', defaultSettings: { primaryColor: '#8E44AD', dividerColor: '#d8bfd8', paragraphFontSize: '11pt', headerFontSize: '15pt', lineHeight: '1.4', fontFamily: 'Open Sans, sans-serif' } },
+    { id: 'bold', name: 'Bold & Impactful', imageUrl: '/images/templates/professional.jpg', defaultSettings: { primaryColor: '#D9534F', dividerColor: '#f2dede', paragraphFontSize: '12pt', headerFontSize: '16pt', lineHeight: '1.3', fontFamily: 'Montserrat, sans-serif' } },
+    { id: 'creative', name: 'Creative Flair', imageUrl: '/images/templates/creative.jpg', defaultSettings: { primaryColor: '#28A745', dividerColor: '#d4edda', paragraphFontSize: '10pt', headerFontSize: '13pt', lineHeight: '1.6', fontFamily: 'Lato, sans-serif' } },
+    { id: 'minimalist', name: 'Clean & Simple', imageUrl: '/images/templates/minimalist.jpg', defaultSettings: { primaryColor: '#6C757D', dividerColor: '#e9ecef', paragraphFontSize: '11.5pt', headerFontSize: '14.5pt', lineHeight: '1.45', fontFamily: 'Roboto, sans-serif' } },
+    { id: 'tech', name: 'Tech Forward', imageUrl: '/images/templates/tech.jpg', defaultSettings: { primaryColor: '#00A8E8', dividerColor: '#dcf4f9', paragraphFontSize: '10.5pt', headerFontSize: '14pt', lineHeight: '1.5', fontFamily: 'Roboto, sans-serif' } },
+    { id: 'executive', name: 'Executive Suite', imageUrl: '/images/templates/executive.jpg', defaultSettings: { primaryColor: '#0D47A1', dividerColor: '#bbdefb', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Merriweather, serif' } },
+    { id: 'academic', name: 'Academic Scholar', imageUrl: '/images/templates/academic.jpg', defaultSettings: { primaryColor: '#800000', dividerColor: '#e0e0e0', paragraphFontSize: '12pt', headerFontSize: '15pt', lineHeight: '1.6', fontFamily: 'Lato, sans-serif' } },
+    { id: 'graphite', name: 'Graphite & Slate', imageUrl: '/images/templates/graphite.jpg', defaultSettings: { primaryColor: '#34495E', dividerColor: '#bdc3c7', paragraphFontSize: '11pt', headerFontSize: '14.5pt', lineHeight: '1.4', fontFamily: 'Montserrat, sans-serif' } },
+    { id: 'verdant', name: 'Verdant Green', imageUrl: '/images/templates/verdant.jpg', defaultSettings: { primaryColor: '#1E8449', dividerColor: '#d4efdf', paragraphFontSize: '11.5pt', headerFontSize: '15pt', lineHeight: '1.5', fontFamily: 'Open Sans, sans-serif' } },
+    { id: 'crimson', name: 'Crimson Bold', imageUrl: '/images/templates/crimson.jpg', defaultSettings: { primaryColor: '#C0392B', dividerColor: '#f5b7b1', paragraphFontSize: '11pt', headerFontSize: '16pt', lineHeight: '1.35', fontFamily: 'Inter, sans-serif' } }
+];
 
 // --- Reusable Components ---
 
@@ -160,6 +177,31 @@ const RefinePromptModal = ({ isOpen, onClose, onRefine, isLoading }) => {
     );
 };
 
+const ChangeTemplateModal = ({ isOpen, onClose, onSelectTemplate, currentTemplateId, settings }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center flex-shrink-0">
+                <h2 className="text-2xl font-bold">Change Template</h2>
+                {/* This top-level close button is still useful */}
+            </div>
+            <div className="overflow-y-auto flex-grow p-4">
+              <TemplateSelector
+                templates={cvTemplates}
+                selectedTemplateId={currentTemplateId}
+                onSelectTemplate={onSelectTemplate}
+                primaryColor={settings?.primaryColor}
+                // Pass the new props here
+                isModalMode={true} 
+                onClose={onClose}
+              />
+            </div>
+        </div>
+    </div>
+  );
+};
+
 
 // --- Main Editor Component ---
 const AiCvEditor = ({ cvData, setCvData }) => {
@@ -167,6 +209,7 @@ const AiCvEditor = ({ cvData, setCvData }) => {
   const [loadingStates, setLoadingStates] = useState({});
   const primaryColor = cvData.settings?.primaryColor || '#2563EB';
   const [isSectionReorderModalOpen, setIsSectionReorderModalOpen] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [itemReorderModal, setItemReorderModal] = useState({ isOpen: false, sectionKey: null, title: '', items: [], itemTitleKey: '', itemSubtitleKey: '' });
   const [refineModalState, setRefineModalState] = useState({ isOpen: false, fieldName: null, currentValue: '', updateFn: null, isRichText: false });
 
@@ -240,6 +283,16 @@ const AiCvEditor = ({ cvData, setCvData }) => {
   const handleJobDescriptionChange = (e) => setCvData(prev => ({...prev, aiHelpers: {...prev.aiHelpers, jobDescription: e.target.value }}));
   const handleSaveSectionOrder = (newOrder) => setCvData(prev => ({ ...prev, settings: { ...prev.settings, sectionOrder: newOrder } }));
   const handleSaveItemOrder = (sectionKey, newItems) => { setCvData(prev => ({ ...prev, [sectionKey]: newItems })); };
+  
+  const handleTemplateSelection = useCallback((templateId) => {
+    const selectedTemplate = cvTemplates.find(t => t.id === templateId);
+    if (selectedTemplate) {
+        setCvData(prev => ({
+            ...prev,
+            settings: { ...prev.settings, ...selectedTemplate.defaultSettings, templateId: templateId }
+        }));
+    }
+  }, []);
 
   const sectionComponents = useMemo(() => ({
     summary: (
@@ -251,7 +304,6 @@ const AiCvEditor = ({ cvData, setCvData }) => {
       <EditorSection title="Work Experience" primaryColor={primaryColor} onReorder={() => setItemReorderModal({ isOpen: true, sectionKey: 'experience', title: 'Reorder Work Experience', items: cvData.experience || [], itemTitleKey: 'role', itemSubtitleKey: 'company' })}>
         {(cvData.experience || []).map((exp, index) => (
           <div key={exp.id || index} className="p-3 border-b last:border-b-0 relative bg-white rounded-md mb-3">
-             {/* FIXED: Added z-10 to the delete button */}
              <button onClick={() => removeDynamicEntry(index, 'experience')} className="absolute top-2 right-2 z-10 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
              <EditableField label="Job Title" name="role" value={exp.role || exp.jobTitle || ''} onChange={e => handleDynamicChange(e, index, 'experience')} />
              <EditableField label="Company" name="company" value={exp.company || ''} onChange={e => handleDynamicChange(e, index, 'experience')} />
@@ -274,7 +326,6 @@ const AiCvEditor = ({ cvData, setCvData }) => {
       <EditorSection title="Education" primaryColor={primaryColor} onReorder={() => setItemReorderModal({ isOpen: true, sectionKey: 'education', title: 'Reorder Education', items: cvData.education || [], itemTitleKey: 'degree', itemSubtitleKey: 'institution' })}>
         {(cvData.education || []).map((edu, index) => (
           <div key={edu.id || index} className="p-3 border-b last:border-b-0 relative bg-white rounded-md mb-3">
-             {/* FIXED: Added z-10 to the delete button */}
              <button onClick={() => removeDynamicEntry(index, 'education')} className="absolute top-2 right-2 z-10 text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 hover:bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
              <EditableField label="Degree / Program" name="degree" value={edu.degree || ''} onChange={(e) => handleDynamicChange(e, index, 'education')} />
              <EditableField label="Institution" name="institution" value={edu.institution || ''} onChange={(e) => handleDynamicChange(e, index, 'education')} />
@@ -303,12 +354,18 @@ const AiCvEditor = ({ cvData, setCvData }) => {
             <h2 className="text-3xl font-extrabold text-gray-900 mb-2">AI Co-Pilot Editor</h2>
             <p className="text-gray-600">Use the ✨ magic wand to refine text or add a job description to tailor your CV.</p>
           </div>
-          <div className="p-4 bg-gray-100 rounded-lg mb-6 flex items-center justify-between">
+          <div className="p-4 bg-gray-100 rounded-lg mb-6 flex items-center justify-between flex-wrap gap-2">
             <span className="font-semibold text-gray-700">Editor Actions</span>
-            <button onClick={() => setIsSectionReorderModalOpen(true)} className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-              Reorder Sections
-            </button>
+            <div className="flex gap-2">
+                <button onClick={() => setIsTemplateModalOpen(true)} className="px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
+                    Change Template
+                </button>
+                <button onClick={() => setIsSectionReorderModalOpen(true)} className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                  Reorder Sections
+                </button>
+            </div>
           </div>
           <EditorSection title="Job Matcher (Optional)" primaryColor={primaryColor}>
             <EditableField label="Paste Job Description Here" name="jobDescription" type="textarea" rows="4" value={cvData.aiHelpers?.jobDescription} onChange={handleJobDescriptionChange} />
@@ -352,6 +409,13 @@ const AiCvEditor = ({ cvData, setCvData }) => {
         onClose={() => setRefineModalState({ isOpen: false, fieldName: null, currentValue: '', updateFn: null, isRichText: false })}
         onRefine={handleExecuteRefine}
         isLoading={loadingStates[refineModalState.fieldName]}
+      />
+      <ChangeTemplateModal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        onSelectTemplate={handleTemplateSelection}
+        currentTemplateId={cvData?.settings?.templateId}
+        settings={cvData?.settings}
       />
     </div>
   );
