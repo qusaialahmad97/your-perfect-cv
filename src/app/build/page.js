@@ -142,9 +142,9 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
     };
     
     const inputElement = currentQuestion.isTextarea ? (
-        <textarea id={currentQuestion.id} rows={8} value={currentValue} onChange={handleInputChange} placeholder={currentQuestion.placeholder} className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500" />
+        <textarea id={currentQuestion.id} name={currentQuestion.id} rows={8} value={currentValue} onChange={handleInputChange} placeholder={currentQuestion.placeholder} className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 text-gray-900" />
     ) : (
-        <input type="text" id={currentQuestion.id} value={currentValue} onChange={handleInputChange} placeholder={currentQuestion.placeholder} className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500" />
+        <input type="text" id={currentQuestion.id} name={currentQuestion.id} value={currentValue} onChange={handleInputChange} placeholder={currentQuestion.placeholder} className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 text-gray-900" />
     );
 
     return (
