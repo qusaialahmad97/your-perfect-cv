@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-// Reusable Field Component
+// Reusable Field Component (Updated for Light Mode Only)
 const FormField = ({ label, value, onChange, name, type = 'text', rows = 3 }) => (
   <div className="mb-4">
     <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
@@ -12,7 +12,7 @@ const FormField = ({ label, value, onChange, name, type = 'text', rows = 3 }) =>
         value={value || ''}
         onChange={onChange}
         rows={rows}
-        className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500"
+        className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 bg-white text-gray-900"
       />
     ) : (
       <input
@@ -20,7 +20,7 @@ const FormField = ({ label, value, onChange, name, type = 'text', rows = 3 }) =>
         name={name}
         value={value || ''}
         onChange={onChange}
-        className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500"
+        className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 bg-white text-gray-900"
       />
     )}
   </div>

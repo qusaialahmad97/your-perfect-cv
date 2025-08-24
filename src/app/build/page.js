@@ -22,7 +22,7 @@ import TemplateSelector from '@/components/cv/TemplateSelector';
 const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>;
 const ButtonSpinner = () => <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>;
 
-// --- The Complete AIQuestionnaire Component ---
+// --- The Complete AIQuestionnaire Component (Light Mode Only) ---
 const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserInput, isAiLoading, primaryColor, fillWithSampleData }) => {
     const aiQuestions = [
         { id: 'targetRole', question: "What is the exact job title you are applying for?", placeholder: "e.g., Senior Frontend Developer", required: true, dataKey: 'aiHelpers' },
@@ -142,15 +142,29 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
     };
     
     const inputElement = currentQuestion.isTextarea ? (
-        <textarea id={currentQuestion.id} name={currentQuestion.id} rows={8} value={currentValue} onChange={handleInputChange} placeholder={currentQuestion.placeholder} className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 text-gray-900" />
+    <textarea 
+        id={currentQuestion.id} 
+        rows={8} 
+        value={currentValue} 
+        onChange={handleInputChange} 
+        placeholder={currentQuestion.placeholder} 
+        className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white" 
+    />
     ) : (
-        <input type="text" id={currentQuestion.id} name={currentQuestion.id} value={currentValue} onChange={handleInputChange} placeholder={currentQuestion.placeholder} className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 text-gray-900" />
+    <input 
+        type="text" 
+        id={currentQuestion.id} 
+        value={currentValue} 
+        onChange={handleInputChange} 
+        placeholder={currentQuestion.placeholder} 
+        className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white" 
+    />
     );
 
     return (
-         <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+        <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-200">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">AI-Powered CV Builder</h2>
+                <h2 className="text-2xl font-bold text-gray-900">AI-Powered CV Builder</h2>
                 <button onClick={fillWithSampleData} className="text-xs bg-purple-100 text-purple-700 py-1 px-2 rounded-md hover:bg-purple-200">Fill Sample</button>
             </div>
             
@@ -208,16 +222,13 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
 // --- The Parent CvBuilder Component ---
 const CvBuilder = () => {
     // --- TEMPLATE DEFINITIONS ---
-    // The original 6 templates plus 6 new ones have been added here.
     const cvTemplates = [
-        // Original Templates
         { id: 'modern', name: 'Modern Minimalist', imageUrl: '/images/templates/modern.jpg', defaultSettings: { primaryColor: '#007BFF', dividerColor: '#e0e0e0', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Inter, sans-serif' } },
         { id: 'classic', name: 'Classic Professional', imageUrl: '/images/templates/classic.jpg', defaultSettings: { primaryColor: '#333333', dividerColor: '#cccccc', paragraphFontSize: '10.5pt', headerFontSize: '13.5pt', lineHeight: '1.5', fontFamily: 'Merriweather, serif' } },
         { id: 'elegant', name: 'Elegant Serenity', imageUrl: '/images/templates/elegant.jpg', defaultSettings: { primaryColor: '#8E44AD', dividerColor: '#d8bfd8', paragraphFontSize: '11pt', headerFontSize: '15pt', lineHeight: '1.4', fontFamily: 'Open Sans, sans-serif' } },
         { id: 'bold', name: 'Bold & Impactful', imageUrl: '/images/templates/professional.jpg', defaultSettings: { primaryColor: '#D9534F', dividerColor: '#f2dede', paragraphFontSize: '12pt', headerFontSize: '16pt', lineHeight: '1.3', fontFamily: 'Montserrat, sans-serif' } },
         { id: 'creative', name: 'Creative Flair', imageUrl: '/images/templates/creative.jpg', defaultSettings: { primaryColor: '#28A745', dividerColor: '#d4edda', paragraphFontSize: '10pt', headerFontSize: '13pt', lineHeight: '1.6', fontFamily: 'Lato, sans-serif' } },
         { id: 'minimalist', name: 'Clean & Simple', imageUrl: '/images/templates/minimalist.jpg', defaultSettings: { primaryColor: '#6C757D', dividerColor: '#e9ecef', paragraphFontSize: '11.5pt', headerFontSize: '14.5pt', lineHeight: '1.45', fontFamily: 'Roboto, sans-serif' } },
-        // New Templates
         { id: 'tech', name: 'Tech Forward', imageUrl: '/images/templates/tech.jpg', defaultSettings: { primaryColor: '#00A8E8', dividerColor: '#dcf4f9', paragraphFontSize: '10.5pt', headerFontSize: '14pt', lineHeight: '1.5', fontFamily: 'Roboto, sans-serif' } },
         { id: 'executive', name: 'Executive Suite', imageUrl: '/images/templates/executive.jpg', defaultSettings: { primaryColor: '#0D47A1', dividerColor: '#bbdefb', paragraphFontSize: '11pt', headerFontSize: '14pt', lineHeight: '1.4', fontFamily: 'Merriweather, serif' } },
         { id: 'academic', name: 'Academic Scholar', imageUrl: '/images/templates/academic.jpg', defaultSettings: { primaryColor: '#800000', dividerColor: '#e0e0e0', paragraphFontSize: '12pt', headerFontSize: '15pt', lineHeight: '1.6', fontFamily: 'Lato, sans-serif' } },
@@ -509,10 +520,37 @@ const CvBuilder = () => {
             case 'READY':
                 if (!cvData) { return <div className="flex justify-center items-center h-screen"><Spinner /></div>; }
                 if (!mode) {
-                    const isPro = user && user.subscriptionStatus === 'active';
-                    return (
-                        <div className="text-center max-w-4xl mx-auto"><h1 className="text-4xl font-bold mb-4">Choose Your Path</h1><p className="text-gray-600 mb-8">How would you like to create this CV?</p><div className="flex flex-col md:flex-row gap-8"><div onClick={() => setMode('manual')} className="flex-1 p-8 border-2 rounded-lg cursor-pointer hover:border-blue-500 transition-all"><h2 className="text-2xl font-bold mb-2">Manual Builder</h2><p className="text-gray-500">A simple, single-page form to build your CV.</p></div><div onClick={() => { if (isPro) { setMode('ai'); setAiFlowStep('templateSelection'); } else { router.push('/pricing'); } }} className="relative group flex-1 p-8 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-all">{!isPro && (<div className="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">PRO</div>)}<h2 className="text-2xl font-bold mb-2 text-blue-600">Premium AI Builder</h2><p className="text-gray-500">Generate your CV with AI and edit it with a live preview.</p>{!isPro && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Requires a Pro subscription</div>)}</div></div></div>
-                    );
+                  const isPro = user && user.subscriptionStatus === 'active';
+                  return (
+                    <div className="text-center max-w-4xl mx-auto text-gray-900">
+                      <h1 className="text-4xl font-bold mb-4">Choose Your Path</h1>
+                      <p className="mb-8">How would you like to create this CV?</p>
+                      <div className="flex flex-col md:flex-row gap-8">
+                        <div 
+                          onClick={() => setMode('manual')} 
+                          className="flex-1 p-8 border-2 rounded-lg cursor-pointer hover:border-blue-500 transition-all bg-white"
+                        >
+                          <h2 className="text-2xl font-bold mb-2">Manual Builder</h2>
+                          <p className="text-gray-600">A simple, single-page form to build your CV.</p>
+                        </div>
+                        <div 
+                          onClick={() => { if (isPro) { setMode('ai'); setAiFlowStep('templateSelection'); } else { router.push('/pricing'); } }} 
+                          className="relative group flex-1 p-8 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-all"
+                        >
+                          {!isPro && (
+                            <div className="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">PRO</div>
+                          )}
+                          <h2 className="text-2xl font-bold mb-2 text-blue-600">Premium AI Builder</h2>
+                          <p className="text-gray-600">Generate your CV with AI and edit it with a live preview.</p>
+                          {!isPro && (
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                              Requires a Pro subscription
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
                 }
                 if (mode === 'ai') {
                     if (aiFlowStep === 'templateSelection') { return ( <TemplateSelector templates={cvTemplates} selectedTemplateId={cvData.settings.templateId} onSelectTemplate={handleTemplateSelection} onNext={() => setAiFlowStep('questionnaire')} primaryColor={primaryColor} setPrimaryColor={(value) => handleSettingsChange('primaryColor', value)} setDividerColor={(value) => handleSettingsChange('dividerColor', value)} setFontSize={(value) => handleSettingsChange('paragraphFontSize', value)} setLineHeight={(value) => handleSettingsChange('lineHeight', value)} setFontFamily={(value) => handleSettingsChange('fontFamily', value)} /> ); }
@@ -532,9 +570,21 @@ const CvBuilder = () => {
     return (
         <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
             {pageState === 'READY' && cvData && (mode === 'ai' && isAiGenerated || mode === 'manual') && (
-                <div className="mx-auto mb-6 flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-xl shadow-lg border border-gray-200"><input type="text" value={cvName} onChange={(e) => setCvName(e.target.value)} className="text-2xl font-bold text-gray-800 border-b-2 border-transparent focus:border-blue-500 outline-none flex-grow" placeholder="Enter CV Name" /><div className="flex items-center gap-4 flex-wrap"><button onClick={saveProgressToCloud} disabled={saveStatus === 'saving'} className={`font-semibold py-2 px-4 rounded-lg shadow-md transition-colors whitespace-nowrap flex items-center justify-center gap-2 ${ saveStatus === 'saving' ? 'bg-gray-400 text-white cursor-not-allowed' : saveStatus === 'success' ? 'bg-green-500 hover:bg-green-600 text-white' : saveStatus === 'error' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white' }`}>{saveStatus === 'saving' && <ButtonSpinner />}{saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? 'Saved!' : saveStatus === 'error' ? 'Error!' : 'Save Progress'}</button><button onClick={handlePrint} className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition whitespace-nowrap">Download PDF</button><Link href="/dashboard" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition whitespace-nowrap">Back to Dashboard</Link></div></div>
+                <div className="mx-auto mb-6 flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-xl shadow-lg border border-gray-200">
+                    <input type="text" value={cvName} onChange={(e) => setCvName(e.target.value)} className="text-2xl font-bold text-gray-800 border-b-2 border-transparent focus:border-blue-500 outline-none flex-grow bg-white" placeholder="Enter CV Name" />
+                    <div className="flex items-center gap-4 flex-wrap">
+                        <button onClick={saveProgressToCloud} disabled={saveStatus === 'saving'} className={`font-semibold py-2 px-4 rounded-lg shadow-md transition-colors whitespace-nowrap flex items-center justify-center gap-2 ${ saveStatus === 'saving' ? 'bg-gray-400 text-white cursor-not-allowed' : saveStatus === 'success' ? 'bg-green-500 hover:bg-green-600 text-white' : saveStatus === 'error' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white' }`}>
+                            {saveStatus === 'saving' && <ButtonSpinner />}
+                            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? 'Saved!' : saveStatus === 'error' ? 'Error!' : 'Save Progress'}
+                        </button>
+                        <button onClick={handlePrint} className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition whitespace-nowrap">Download PDF</button>
+                        <Link href="/dashboard" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition whitespace-nowrap">Back to Dashboard</Link>
+                    </div>
+                </div>
             )}
-            <main className="mx-auto">{renderContent()}</main>
+            <main className="mx-auto text-gray-900">
+                {renderContent()}
+            </main>
 
             <div className="printable-content" style={{ position: 'absolute', zIndex: -1, opacity: 0, height: 0, overflow: 'hidden' }}>
                 {cvData && (<PrintableCv ref={componentToPrintRef} data={cvData} primaryColor={primaryColor} settings={cvData.settings} />)}
