@@ -31,18 +31,14 @@ export async function POST(request) {
       emailVerified: false,
     });
 
-    // --- THIS IS THE EDIT ---
-    // We now add the default subscription fields to the user document in Firestore.
     await getFirestore().collection('users').doc(userRecord.uid).set({
       email: userRecord.email,
       createdAt: new Date().toISOString(),
       cvs: [],
-      // Initialize subscription fields for the new user
       paddleSubscriptionId: null,
-      subscriptionStatus: 'inactive', // All new users start with an inactive subscription
+      subscriptionStatus: 'inactive',
       subscriptionPeriodEnd: null,
     });
-    // --- END OF EDIT ---
 
     const verificationLink = await getAuth().generateEmailVerificationLink(email);
 

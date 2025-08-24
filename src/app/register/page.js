@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react'; // Import useEffect
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth to check status
+import { useAuth } from '@/contexts/AuthContext';
+// --- IMPORT FIREBASE CLIENT AUTH ---
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/firebase'; // Make sure this path is correct for your project
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -15,16 +18,13 @@ const RegisterPage = () => {
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { user, loading } = useAuth(); // Get user and loading state
+  const { user, loading } = useAuth();
 
-  // --- ADD THIS EFFECT ---
-  // This prevents an already logged-in user from seeing the register page.
   useEffect(() => {
     if (!loading && user) {
-      router.push('/dashboard'); // or any other appropriate page
+      router.push('/dashboard');
     }
   }, [user, loading, router]);
-  // --- END OF ADDITION ---
 
   const { email, password } = formData;
 
@@ -38,13 +38,17 @@ const RegisterPage = () => {
 
     try {
       const apiUrl = '/api/users/register'; 
+      // Step 1: Create the user via your backend API
       await axios.post(apiUrl, { email, password });
       
       // --- THE FIX ---
-      // On successful registration, immediately redirect to the verify-email page.
-      // Do not show a message or wait. The next page will have all the instructions.
-      router.push('/auth/verify-email');
+      // Step 2: Sign the user in on the client-side. This sets the auth state.
+      await signInWithEmailAndPassword(auth, email, password);
       // --- END OF FIX ---
+
+      // Step 3: Now that the user is signed in, redirect them.
+      // The verify-email page will now find an authenticated user.
+      router.push('/auth/verify-email?source=register');
 
     } catch (err) {
       setIsError(true);
@@ -53,13 +57,10 @@ const RegisterPage = () => {
       } else {
         setMessage('Registration failed. Please try again.');
       }
-      // Keep the user on the page to see the error message
       setIsLoading(false); 
     }
-    // Note: We don't set loading to false in the success case because we are navigating away.
   };
   
-  // Show a loading screen while checking auth state
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/firebase';
 
@@ -19,12 +19,23 @@ const LoginPage = () => {
 
   const { email, password } = formData;
 
-  // This effect handles redirecting users who are ALREADY logged in and verified.
+  // --- THE MAIN FIX ---
+  // This hook is now the single source of truth for redirecting any authenticated user.
+  // It handles all cases: verified, not verified, etc.
   useEffect(() => {
-    if (!loading && user?.emailVerified) {
-      router.push('/dashboard');
+    // Wait until the loading is complete before checking the user state.
+    if (!loading && user) {
+      if (user.emailVerified) {
+        // If they are verified, send them to the main app.
+        router.push('/dashboard');
+      } else {
+        // If they are logged in but NOT verified, send them to the verification page.
+        // This prevents them from getting stuck on the login page.
+        router.push('/auth/verify-email');
+      }
     }
   }, [user, loading, router]);
+  // --- END OF FIX ---
 
   const onChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -34,21 +45,13 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Step 1: Attempt to sign the user in.
+      await signInWithEmailAndPassword(auth, email, password);
       
-      // *** THE CORE VERIFICATION CHECK ***
-      // After a successful login, check if the user's email is verified.
-      if (userCredential.user && !userCredential.user.emailVerified) {
-        // If they are not verified, send them to the verification page to get instructions.
-        // It's good UX to resend the email automatically in case they lost the first one.
-        await sendEmailVerification(userCredential.user);
-        router.push('/auth/verify-email');
-        // We don't set loading to false here because we are navigating away.
-        return; 
-      }
-      
-      // If the user IS verified, the `useEffect` hook above will catch the state
-      // change and redirect them to the dashboard automatically.
+      // Step 2: On successful login, do nothing here.
+      // The `useEffect` hook above will detect the change in the `user` state
+      // and automatically handle the redirect to the correct page.
+      // This simplifies logic and avoids race conditions.
 
     } catch (err) {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
@@ -57,13 +60,15 @@ const LoginPage = () => {
         setMessage('Login failed. Please try again.');
         console.error("Firebase Login Error:", err);
       }
-      setIsLoading(false); // Set loading to false only if an error occurs.
+      setIsLoading(false); // Only set loading to false if an error occurs.
     }
   };
 
-  // Show a full-page loading indicator while the initial auth state is being determined
-  // or if the user is already verified and is about to be redirected by the useEffect.
-  if (loading || user?.emailVerified) {
+  // --- IMPROVED LOADING STATE ---
+  // Show a full-page loading indicator while checking auth state OR if a user
+  // is already logged in (the useEffect will redirect them shortly).
+  // This prevents the login form from flashing on the screen for authenticated users.
+  if (loading || user) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -85,6 +90,7 @@ const LoginPage = () => {
             name="email"
             value={email}
             onChange={onChange}
+            autoComplete="email"
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
           />
