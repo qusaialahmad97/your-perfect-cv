@@ -59,6 +59,7 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [isParsing, setIsParsing] = useState(false);
     const [parseError, setParseError] = useState('');
+    const [parseSuccess, setParseSuccess] = useState(''); // <<< NEW STATE for success message
     const fileInputRef = useRef(null);
 
     const nextQuestion = () => { if (currentQuestionIndex < aiQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1); };
@@ -72,6 +73,8 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
         }
         setIsParsing(true);
         setParseError('');
+        setParseSuccess(''); // <<< CLEAR previous messages on new upload
+
         try {
             const pdfjsLib = await import('pdfjs-dist');
             pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
@@ -96,6 +99,11 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
                         education: parsedData.education?.length > 0 ? parsedData.education : prevData.education,
                         skills: { ...prevData.skills, ...parsedData.skills },
                     }));
+                    
+                    // <<< SET SUCCESS MESSAGE on successful parsing
+                    setParseSuccess('Success! We pre-filled some questions based on your CV.');
+                    setTimeout(() => setParseSuccess(''), 5000); // Hide after 5 seconds
+
                 } catch (innerError) {
                     console.error("Error during PDF processing:", innerError);
                     setParseError(innerError.message || 'Failed to process the PDF content.');
@@ -111,7 +119,8 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
 
             reader.readAsArrayBuffer(file);
 
-        } catch (error) {
+        } catch (error)
+        {
             console.error("PDF Library Loading Error:", error);
             setParseError(error.message || 'Could not load the PDF parsing library.');
             setIsParsing(false);
@@ -181,6 +190,13 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
                         <><ButtonSpinner /><span>Parsing CV...</span></>
                     ) : ( "🚀 Upload CV to Pre-fill" )}
                 </button>
+                
+                {/* <<< RENDER SUCCESS MESSAGE HERE >>> */}
+                {parseSuccess && (
+                    <div className="mt-3 p-3 bg-green-100 border border-green-300 text-green-800 text-sm rounded-md transition-opacity duration-300">
+                        {parseSuccess}
+                    </div>
+                )}
                 {parseError && <p className="text-red-500 text-xs mt-2">{parseError}</p>}
             </div>
 
