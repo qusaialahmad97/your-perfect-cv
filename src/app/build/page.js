@@ -23,6 +23,7 @@ const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-t
 const ButtonSpinner = () => <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>;
 
 // --- The Complete AIQuestionnaire Component (Light Mode Only) ---
+// --- The Complete AIQuestionnaire Component (Light Mode Only) ---
 const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserInput, isAiLoading, primaryColor }) => {
     const aiQuestions = [
         { id: 'targetRole', question: "What is the exact job title you are applying for?", placeholder: "e.g., Senior Frontend Developer", required: true, dataKey: 'aiHelpers' },
@@ -170,63 +171,75 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
     );
 
     return (
-        <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-            <div className="mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">AI-Powered CV Builder</h2>
-            </div>
-            
-            <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-center">
-                <p className="text-indigo-800 font-semibold mb-2">Have a CV already?</p>
-                <p className="text-sm text-indigo-600 mb-3">Upload your PDF to pre-fill the questions instantly. We don't store your file.</p>
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".pdf" className="hidden" />
-                <button
-                    onClick={() => fileInputRef.current.click()}
-                    disabled={isParsing}
-                    className="w-full py-2 px-4 font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-wait flex items-center justify-center gap-2"
-                >
-                    {isParsing ? (
-                        <><ButtonSpinner /><span>Parsing CV...</span></>
-                    ) : ( "🚀 Upload CV to Pre-fill" )}
-                </button>
+        // --- START OF EDIT ---
+        // 1. Converted to a flex column with a fixed minimum height.
+        <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-200 flex flex-col min-h-[720px]">
+            {/* This top section remains as is */}
+            <div>
+                <div className="mb-4">
+                    <h2 className="text-2xl font-bold text-gray-900">AI-Powered CV Builder</h2>
+                </div>
                 
-                {parseSuccess && (
-                    <div className="mt-3 p-3 bg-green-100 border border-green-300 text-green-800 text-sm rounded-md transition-opacity duration-300">
-                        {parseSuccess}
-                    </div>
-                )}
-                {parseError && <p className="text-red-500 text-xs mt-2">{parseError}</p>}
+                <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-center">
+                    <p className="text-indigo-800 font-semibold mb-2">Have a CV already?</p>
+                    <p className="text-sm text-indigo-600 mb-3">Upload your PDF to pre-fill the questions instantly. We don't store your file.</p>
+                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".pdf" className="hidden" />
+                    <button
+                        onClick={() => fileInputRef.current.click()}
+                        disabled={isParsing}
+                        className="w-full py-2 px-4 font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-wait flex items-center justify-center gap-2"
+                    >
+                        {isParsing ? (
+                            <><ButtonSpinner /><span>Parsing CV...</span></>
+                        ) : ( "🚀 Upload CV to Pre-fill" )}
+                    </button>
+                    
+                    {parseSuccess && (
+                        <div className="mt-3 p-3 bg-green-100 border border-green-300 text-green-800 text-sm rounded-md transition-opacity duration-300">
+                            {parseSuccess}
+                        </div>
+                    )}
+                    {parseError && <p className="text-red-500 text-xs mt-2">{parseError}</p>}
+                </div>
+
+                <p className="text-center text-gray-500 mb-6">Or, answer the questions below. Your progress is not auto-saved.</p>
+                
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+                    <div className="h-2 rounded-full" style={{ width: `${progress}%`, backgroundColor: primaryColor, transition: 'width 0.3s ease-in-out' }}></div>
+                </div>
             </div>
 
-            <p className="text-center text-gray-500 mb-6">Or, answer the questions below. Your progress is not auto-saved.</p>
+            {/* 2. The question area is wrapped in a div that grows to fill available space. */}
+            <div className="flex-grow">
+                <div className="mb-6">
+                    {currentQuestion.header && <h3 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">{currentQuestion.header}</h3>}
+                    <label htmlFor={currentQuestion.id} className="block text-lg font-medium text-gray-800 mb-3">
+                        {currentQuestion.question}
+                        {currentQuestion.required && <span className="text-red-500 ml-1">*</span>}
+                        {currentQuestion.optional && <span className="text-gray-400 text-sm ml-2">(Optional)</span>}
+                    </label>
+                    {inputElement}
+                </div>
+            </div>
             
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-                <div className="h-2 rounded-full" style={{ width: `${progress}%`, backgroundColor: primaryColor, transition: 'width 0.3s ease-in-out' }}></div>
-            </div>
-
-            <div className="mb-6">
-                {currentQuestion.header && <h3 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">{currentQuestion.header}</h3>}
-                <label htmlFor={currentQuestion.id} className="block text-lg font-medium text-gray-800 mb-3">
-                    {currentQuestion.question}
-                    {currentQuestion.required && <span className="text-red-500 ml-1">*</span>}
-                    {currentQuestion.optional && <span className="text-gray-400 text-sm ml-2">(Optional)</span>}
-                </label>
-                {inputElement}
-            </div>
-
-            <div className="flex justify-between items-center">
-                <button onClick={prevQuestion} disabled={currentQuestionIndex === 0} className="py-2 px-4 text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
-                    Previous
-                </button>
-                {currentQuestionIndex < aiQuestions.length - 1 ? (
-                    <button onClick={nextQuestion} className="py-2 px-4 text-sm font-medium rounded-md text-white" style={{ backgroundColor: primaryColor }}>
-                        Next
+            {/* 3. This button section is now anchored to the bottom. */}
+            <div>
+                <div className="flex justify-between items-center">
+                    <button onClick={prevQuestion} disabled={currentQuestionIndex === 0} className="py-2 px-4 text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
+                        Previous
                     </button>
-                ) : (
-                    <button onClick={generateCvFromUserInput} disabled={isAiLoading} className="py-2 px-4 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50">
-                        {isAiLoading ? 'Generating...' : 'Generate CV with AI'}
-                    </button>
-                )}
+                    {currentQuestionIndex < aiQuestions.length - 1 ? (
+                        <button onClick={nextQuestion} className="py-2 px-4 text-sm font-medium rounded-md text-white" style={{ backgroundColor: primaryColor }}>
+                            Next
+                        </button>
+                    ) : (
+                        <button onClick={generateCvFromUserInput} disabled={isAiLoading} className="py-2 px-4 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50">
+                            {isAiLoading ? 'Generating...' : 'Generate CV with AI'}
+                        </button>
+                    )}
+                </div>
             </div>
+            {/* --- END OF EDIT --- */}
         </div>
     );
 };
