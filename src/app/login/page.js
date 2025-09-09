@@ -19,23 +19,15 @@ const LoginPage = () => {
 
   const { email, password } = formData;
 
-  // --- THE MAIN FIX ---
-  // This hook is now the single source of truth for redirecting any authenticated user.
-  // It handles all cases: verified, not verified, etc.
   useEffect(() => {
-    // Wait until the loading is complete before checking the user state.
     if (!loading && user) {
       if (user.emailVerified) {
-        // If they are verified, send them to the main app.
         router.push('/dashboard');
       } else {
-        // If they are logged in but NOT verified, send them to the verification page.
-        // This prevents them from getting stuck on the login page.
         router.push('/auth/verify-email');
       }
     }
   }, [user, loading, router]);
-  // --- END OF FIX ---
 
   const onChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -45,14 +37,8 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      // Step 1: Attempt to sign the user in.
       await signInWithEmailAndPassword(auth, email, password);
-      
-      // Step 2: On successful login, do nothing here.
-      // The `useEffect` hook above will detect the change in the `user` state
-      // and automatically handle the redirect to the correct page.
-      // This simplifies logic and avoids race conditions.
-
+      // On success, the useEffect hook will handle the redirect.
     } catch (err) {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         setMessage('Invalid credentials. Please check your email and password.');
@@ -60,14 +46,10 @@ const LoginPage = () => {
         setMessage('Login failed. Please try again.');
         console.error("Firebase Login Error:", err);
       }
-      setIsLoading(false); // Only set loading to false if an error occurs.
+      setIsLoading(false);
     }
   };
 
-  // --- IMPROVED LOADING STATE ---
-  // Show a full-page loading indicator while checking auth state OR if a user
-  // is already logged in (the useEffect will redirect them shortly).
-  // This prevents the login form from flashing on the screen for authenticated users.
   if (loading || user) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-50">
@@ -95,10 +77,20 @@ const LoginPage = () => {
             required
           />
         </div>
+        
+        {/* === START OF EDIT === */}
         <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-            Password
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-gray-700 text-sm font-bold" htmlFor="password">
+              Password
+            </label>
+            <Link
+              href="/auth/reset-password" // NOTE: Ensure this path matches your file structure, e.g., /app/auth/reset-password/page.jsx
+              className="text-sm font-medium text-blue-500 hover:text-blue-800"
+            >
+              Forgot Password?
+            </Link>
+          </div>
           <input
             type="password"
             id="password"
@@ -106,13 +98,15 @@ const LoginPage = () => {
             autoComplete="current-password"
             value={password}
             onChange={onChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
           />
         </div>
+        {/* === END OF EDIT === */}
+
         <div className="flex items-center justify-between">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full disabled:bg-blue-300 flex justify-center items-center"
             disabled={isLoading}
           >
