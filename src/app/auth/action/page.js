@@ -163,7 +163,7 @@ const ActionHandler = () => {
                     <>
                         <h2 className="text-2xl font-bold mb-4 text-green-600">Success!</h2>
                         <p className="text-gray-600 mb-6">{message}</p>
-                        <Link href="/auth/login" className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+                        <Link href="/login" className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
                             Proceed to Login
                         </Link>
                     </>

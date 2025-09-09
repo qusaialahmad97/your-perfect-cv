@@ -23,7 +23,7 @@ const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-t
 const ButtonSpinner = () => <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>;
 
 // --- The Complete AIQuestionnaire Component (Light Mode Only) ---
-const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserInput, isAiLoading, primaryColor, fillWithSampleData }) => {
+const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserInput, isAiLoading, primaryColor }) => {
     const aiQuestions = [
         { id: 'targetRole', question: "What is the exact job title you are applying for?", placeholder: "e.g., Senior Frontend Developer", required: true, dataKey: 'aiHelpers' },
         { id: 'jobDescription', question: "To get the best results, paste the job description here.", placeholder: "Pasting the job description helps the AI tailor your CV...", isTextarea: true, optional: true, dataKey: 'aiHelpers' },
@@ -59,7 +59,7 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [isParsing, setIsParsing] = useState(false);
     const [parseError, setParseError] = useState('');
-    const [parseSuccess, setParseSuccess] = useState(''); // <<< NEW STATE for success message
+    const [parseSuccess, setParseSuccess] = useState('');
     const fileInputRef = useRef(null);
 
     const nextQuestion = () => { if (currentQuestionIndex < aiQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1); };
@@ -73,7 +73,7 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
         }
         setIsParsing(true);
         setParseError('');
-        setParseSuccess(''); // <<< CLEAR previous messages on new upload
+        setParseSuccess('');
 
         try {
             const pdfjsLib = await import('pdfjs-dist');
@@ -100,9 +100,8 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
                         skills: { ...prevData.skills, ...parsedData.skills },
                     }));
                     
-                    // <<< SET SUCCESS MESSAGE on successful parsing
                     setParseSuccess('Success! We pre-filled some questions based on your CV.');
-                    setTimeout(() => setParseSuccess(''), 5000); // Hide after 5 seconds
+                    setTimeout(() => setParseSuccess(''), 5000);
 
                 } catch (innerError) {
                     console.error("Error during PDF processing:", innerError);
@@ -172,9 +171,8 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
 
     return (
         <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
+            <div className="mb-4">
                 <h2 className="text-2xl font-bold text-gray-900">AI-Powered CV Builder</h2>
-                <button onClick={fillWithSampleData} className="text-xs bg-purple-100 text-purple-700 py-1 px-2 rounded-md hover:bg-purple-200">Fill Sample</button>
             </div>
             
             <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-center">
@@ -191,7 +189,6 @@ const AIQuestionnaire = ({ cvData, setCvData, handleChange, generateCvFromUserIn
                     ) : ( "🚀 Upload CV to Pre-fill" )}
                 </button>
                 
-                {/* <<< RENDER SUCCESS MESSAGE HERE >>> */}
                 {parseSuccess && (
                     <div className="mt-3 p-3 bg-green-100 border border-green-300 text-green-800 text-sm rounded-md transition-opacity duration-300">
                         {parseSuccess}
@@ -297,42 +294,7 @@ const CvBuilder = () => {
         pageStyle: `@page { size: A4; margin: 1cm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`
     });
 
-    const fillWithSampleData = () => {
-        const sampleData = {
-            ...cvData,
-            personalInformation: { name: 'Qusai Ahmad', professionalTitle: 'Senior QA Automation Engineer', email: 'qusai.ahmad@email.com', phone: '(123) 456-7890', linkedin: 'linkedin.com/in/q-ahmad', city: 'Amman', country: 'Jordan', portfolioLink: 'github.com/q-ahmad' },
-            summary: "Highly accomplished Senior QA Automation Engineer with over 7 years of experience specializing in building robust testing frameworks for web and mobile applications. Proven ability to lead teams, optimize CI/CD pipelines, and significantly improve quality and efficiency. Expertise in Cypress, Selenium, Java, and API testing.",
-            experience: [{
-                role: 'Test Lead',
-                company: 'Innovate Solutions',
-                location: 'Amman, Jordan',
-                startDate: '2020-01',
-                endDate: 'Present',
-                achievements: 'Designed and implemented a new CI/CD testing pipeline using Jenkins and Selenium, which decreased bug detection time by 40%. Led a team of 5 QA engineers, improving test coverage by 30% for our flagship product. Collaborated with development teams to integrate testing earlier in the SDLC.'
-            }],
-            education: [{
-                degree: 'B.Sc. in Software Engineering',
-                institution: 'Hashemite University',
-                location: 'Zarqa, Jordan',
-                graduationYear: '2019'
-            }],
-            skills: {
-                technical: 'Java, Selenium, Cypress, Appium, SQL, Postman, Jira, Jenkins, GitLab CI/CD, Agile Methodologies, TestRail',
-                soft: 'Critical Thinking, Communication, Mentorship, Problem-solving, Team Leadership, Adaptability'
-            },
-            languages: 'English (Fluent), Arabic (Native)',
-            aiHelpers: {
-                targetRole: 'Senior QA Automation Engineer',
-                jobDescription: 'We are seeking a Senior QA Automation Engineer with extensive experience in creating testing frameworks from scratch. Must be proficient in Cypress and/or Selenium, have strong Java skills, and be able to work with CI/CD pipelines like Jenkins. Experience with API testing using Postman is a plus. Candidates should demonstrate strong leadership and problem-solving skills.',
-                referencesRaw: 'Professor Jane Smith, (555) 123-4567, Head of CS Dept. at Hashemite University; Dr. Alex Chen, (555) 987-6543, Engineering Director at Innovate Solutions.',
-                awardsRaw: 'Innovator of the Year Award (2023), recognized at Tech Solutions Annual Gala for developing a groundbreaking test automation tool.',
-                coursesRaw: 'Advanced Selenium WebDriver (Udemy, 2022); Certified ScrumMaster (Scrum Alliance, 2021); API Testing with Postman (LinkedIn Learning, 2020).',
-                certificationsRaw: 'AWS Certified Solutions Architect (2023); PMP (2021).',
-                customSectionsRaw: 'Volunteer Work: Mentored junior developers at Code for Good Foundation (2020-2023), impacting over 100 students.'
-            }
-        };
-        setCvData(sampleData);
-    };
+    // --- REMOVED THE fillWithSampleData FUNCTION ---
 
     useEffect(() => {
         if (loading) { return; }
@@ -571,7 +533,7 @@ const CvBuilder = () => {
                 if (mode === 'ai') {
                     if (aiFlowStep === 'templateSelection') { return ( <TemplateSelector templates={cvTemplates} selectedTemplateId={cvData.settings.templateId} onSelectTemplate={handleTemplateSelection} onNext={() => setAiFlowStep('questionnaire')} primaryColor={primaryColor} setPrimaryColor={(value) => handleSettingsChange('primaryColor', value)} setDividerColor={(value) => handleSettingsChange('dividerColor', value)} setFontSize={(value) => handleSettingsChange('paragraphFontSize', value)} setLineHeight={(value) => handleSettingsChange('lineHeight', value)} setFontFamily={(value) => handleSettingsChange('fontFamily', value)} /> ); }
                     else if (aiFlowStep === 'questionnaire') { 
-                        return ( <AIQuestionnaire cvData={cvData} setCvData={setCvData} handleChange={handleChange} generateCvFromUserInput={generateCvFromUserInput} isAiLoading={isAiLoading} primaryColor={primaryColor} fillWithSampleData={fillWithSampleData} /> );
+                        return ( <AIQuestionnaire cvData={cvData} setCvData={setCvData} handleChange={handleChange} generateCvFromUserInput={generateCvFromUserInput} isAiLoading={isAiLoading} primaryColor={primaryColor} /> );
                     }
                     else if (aiFlowStep === 'editor') { return ( <AiCvEditor cvData={cvData} setCvData={setCvData} /> ); }
                 }

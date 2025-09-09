@@ -9,13 +9,26 @@ const TemplateSelector = ({
     primaryColor,
     setFontFamily,
     setPrimaryColor,
-    // Props for modal functionality
     isModalMode = false,
     onClose,
 }) => {
+    // --- START OF EDIT ---
+    // This handler manages the double-click action.
+    const handleDoubleClick = (templateId) => {
+        // First, ensure the double-clicked template is officially selected.
+        onSelectTemplate(templateId);
+
+        // Then, perform the appropriate "next" action based on the component's mode.
+        if (isModalMode) {
+            onClose(); // In modal mode, double-clicking is like hitting "Select & Close".
+        } else {
+            onNext(); // In the initial setup, it proceeds to the next step.
+        }
+    };
+    // --- END OF EDIT ---
+
     return (
         <div className={`bg-white p-6 rounded-xl shadow-lg w-full max-w-7xl mx-auto border border-gray-200 ${isModalMode ? 'h-full' : ''}`}>
-            {/* Conditionally render the header and settings */}
             {!isModalMode && (
                 <>
                     <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">Choose Your CV Template</h2>
@@ -52,7 +65,6 @@ const TemplateSelector = ({
                 </>
             )}
 
-            {/* --- FIX: Removed the conditional 'xl:grid-cols-4' to restore original card size --- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
                 {templates.map((t) => (
                     <div
@@ -65,6 +77,12 @@ const TemplateSelector = ({
                             '--tw-ring-color': primaryColor + '30',
                         }}
                         onClick={() => onSelectTemplate(t.id)}
+                        // --- START OF EDIT ---
+                        // Added the onDoubleClick event handler here
+                        onDoubleClick={() => handleDoubleClick(t.id)}
+                        // Added a title for better accessibility and user experience
+                        title={`Double-click to use the ${t.name} template`}
+                        // --- END OF EDIT ---
                     >
                         <h3 className="text-xl font-semibold mb-3">{t.name}</h3>
                         <img
@@ -86,7 +104,6 @@ const TemplateSelector = ({
             </div>
 
             <div className="flex justify-end items-center mt-8 gap-4">
-                {/* Conditionally render the correct button */}
                 {isModalMode ? (
                     <button
                         onClick={onClose}
