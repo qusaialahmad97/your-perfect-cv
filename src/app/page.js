@@ -165,6 +165,8 @@ const HomePage = () => {
             <Link href="/terms-of-service" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link>
             <span>|</span>
             <Link href="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link>
+            <span>|</span>
+            <Link href="/refund-policy" className="text-gray-400 hover:text-white transition-colors">Refund Policy</Link>
           </div>
         </div>
       </footer>
