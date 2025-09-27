@@ -1,7 +1,8 @@
-// components/ats/ATSResult.jsx
+// src/components/ats/ATSResult.jsx
 "use client";
 
 import React, { useState } from 'react';
+import { BulletPointAnalyzer } from './BulletPointAnalyzer';
 
 // --- Reusable Sub-Components for a Professional Look ---
 
@@ -56,24 +57,16 @@ const KeywordPill = ({ keyword, type }) => {
     return <span className={`text-sm font-medium px-3 py-1 rounded-full border ${styles[type]}`}>{keyword}</span>;
 };
 
-const TimelineEvent = ({ event, isLast }) => (
-    <div className="relative pl-8">
-        {!isLast && <div className="absolute left-3 top-3 bottom-0 w-0.5 bg-gray-300"></div>}
-        <div className="absolute left-0 top-1.5 w-6 h-6 bg-white border-2 border-blue-500 rounded-full flex items-center justify-center">
-            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-        </div>
-        <p className="font-bold text-gray-800">{event.role} at {event.company}</p>
-        <p className="text-sm text-gray-500">{event.startDate} – {event.endDate}</p>
-    </div>
-);
-
 // --- Main ATSResult Component ---
 
-const ATSResult = ({ result, onReset }) => {
+const ATSResult = ({ result, onReset, jobDescription }) => {
     const [activeTab, setActiveTab] = useState('dashboard');
     if (!result) return null;
 
     const { overallScore, scoreBreakdown, qualitativeFeedback, timeline } = result;
+
+    // We need to extract the job title. A simple regex is good enough for now.
+    const jobTitle = jobDescription?.match(/^(.*?)\n/)?.[1] || "Target Role";
 
     const tabs = [
         { id: 'dashboard', label: 'Score Dashboard' },
@@ -128,14 +121,35 @@ const ATSResult = ({ result, onReset }) => {
             case 'experience':
                  return (
                     <div className="space-y-8">
-                         <div>
-                            <h3 className="text-xl font-bold text-gray-800 mb-4">Career Timeline</h3>
+                        <div>
+                            <h3 className="text-2xl font-bold text-gray-800 mb-2">Experience Analysis</h3>
+                            <p className="text-gray-600 mb-6">Here's a breakdown of your work experience. Use the AI rewriter to strengthen weak bullet points and incorporate missing keywords.</p>
+                            
                             {timeline && timeline.length > 0 ? (
-                                <div className="space-y-6 border-l-2 border-gray-300 border-dashed ml-3 py-4">
-                                    {timeline.map((event, index) => <TimelineEvent key={index} event={event} isLast={index === timeline.length - 1}/>)}
+                                <div className="space-y-6">
+                                    {timeline.map((job, index) => (
+                                        <div key={index} className="p-4 border rounded-xl bg-gray-50/50">
+                                            <h4 className="font-bold text-lg text-gray-900">{job.role}</h4>
+                                            <p className="text-sm text-gray-500 mb-4">{job.company} | {job.startDate} – {job.endDate}</p>
+                                            
+                                            {job.bulletPoints && job.bulletPoints.length > 0 ? (
+                                                job.bulletPoints.map((bullet, bulletIndex) => (
+                                                    <BulletPointAnalyzer 
+                                                        key={bulletIndex}
+                                                        bullet={bullet}
+                                                        jobTitle={jobTitle}
+                                                        jobDescription={jobDescription}
+                                                        missingKeywords={scoreBreakdown.hardSkills.missing}
+                                                    />
+                                                ))
+                                            ) : (
+                                                <p className="text-sm text-gray-500 italic">No specific achievements or responsibilities were extracted for this role.</p>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             ) : (
-                                <p className="text-gray-500 bg-gray-50 p-4 rounded-md">The AI could not extract a timeline from your CV.</p>
+                                <p className="text-gray-500 bg-gray-50 p-4 rounded-md">The AI could not extract a detailed timeline from your CV.</p>
                             )}
                          </div>
                     </div>
@@ -147,14 +161,6 @@ const ATSResult = ({ result, onReset }) => {
                             <h3 className="text-xl font-bold text-gray-800 mb-2">Final Summary & Strategic Advice</h3>
                             <p className="text-gray-700 bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">{qualitativeFeedback.finalSummary}</p>
                         </div>
-                        
-                        {/* --- THIS SECTION WAS REMOVED ---
-                        <div>
-                            <h3 className="text-xl font-bold text-gray-800 mb-2">Tone & Industry Fit</h3>
-                            <p className="text-gray-700 bg-gray-100 p-4 rounded-lg">{qualitativeFeedback.toneAndIndustryFit}</p>
-                        </div>
-                        --- END REMOVED SECTION --- */}
-                        
                         <div>
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Suggested Interview Questions</h3>
                             <p className="text-sm text-gray-600 mb-3">Be prepared to answer questions that address potential gaps or highlight your strengths:</p>

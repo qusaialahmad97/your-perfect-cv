@@ -152,15 +152,30 @@ export const useAtsAnalysis = () => {
             // --- STEP 1: ISOLATED AI EXTRACTION ---
             setLoadingMessage('Step 1/4: Analyzing your CV...');
             
+            // ⭐⭐⭐ --- UPDATED PROMPT --- ⭐⭐⭐
+            // The JSON structure for jobTimeline now includes `bulletPoints` as an array of strings.
             const cvExtractionPrompt = `Your task is to analyze the following CV text and extract a comprehensive list of hard skills.
             Hard skills include:
             1.  Technical concepts and processes (e.g., Accounts Payable, General Ledger, Reconciliations, IFRS, GAAP, SEO, Agile).
             2.  Software and tools (e.g., SAP, QuickBooks, Excel, Python, PowerBI, Figma, Jira).
             Be literal and extract any term that matches these categories, even if it appears in a sentence.
-            Also extract soft skills, education, experience, and timeline.
+            Also extract soft skills, education, experience, and timeline. For each job in the timeline, extract its responsibilities/achievements as an array of strings called "bulletPoints".
             Return ONLY a single minified JSON object.
             CV: --- ${cvText} ---
-            JSON structure: { "cvKeywords": { "hardSkills": ["<list>"], "softSkills": ["<list>"] }, "cvQualifications": { "totalExperienceYears": <integer>, "highestEducation": "<string>" }, "impactMetrics": { "actionVerbCount": <integer>, "quantifiedResultsCount": <integer> }, "jobTimeline": [ { "role": "<string>", "company": "<string>", "startDate": "<YYYY-MM>", "endDate": "<YYYY-MM or 'Present'>" } ] }`;
+            JSON structure: { 
+              "cvKeywords": { "hardSkills": ["<list>"], "softSkills": ["<list>"] }, 
+              "cvQualifications": { "totalExperienceYears": <integer>, "highestEducation": "<string>" }, 
+              "impactMetrics": { "actionVerbCount": <integer>, "quantifiedResultsCount": <integer> }, 
+              "jobTimeline": [ 
+                { 
+                  "role": "<string>", 
+                  "company": "<string>", 
+                  "startDate": "<YYYY-MM>", 
+                  "endDate": "<YYYY-MM or 'Present'>",
+                  "bulletPoints": ["<string for first bullet point>", "<string for second>"] 
+                } 
+              ] 
+            }`;
 
             const jdExtractionPrompt = `Your task is to analyze the following Job Description and extract a comprehensive list of required hard skills.
             Hard skills include:
