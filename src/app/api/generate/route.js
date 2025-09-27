@@ -25,7 +25,7 @@ export async function POST(request) {
     }
 
     // 4. Prepare the request to the real Gemini API
-    const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
     
     const payload = {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
