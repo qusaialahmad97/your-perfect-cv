@@ -1,3 +1,4 @@
+// components/ats/ATSResult.jsx
 "use client";
 
 import React, { useState } from 'react';
@@ -69,7 +70,6 @@ const TimelineEvent = ({ event, isLast }) => (
 // --- Main ATSResult Component ---
 
 const ATSResult = ({ result, onReset }) => {
-    // We set the initial tab state here. When the component re-mounts, it will always start at the dashboard.
     const [activeTab, setActiveTab] = useState('dashboard');
     if (!result) return null;
 
@@ -144,15 +144,20 @@ const ATSResult = ({ result, onReset }) => {
                  return (
                     <div className="space-y-6">
                         <div>
-                            <h3 className="text-xl font-bold text-gray-800 mb-2">Final Summary</h3>
-                            <p className="text-gray-700 bg-gray-100 p-4 rounded-lg">{qualitativeFeedback.finalSummary}</p>
+                            <h3 className="text-xl font-bold text-gray-800 mb-2">Final Summary & Strategic Advice</h3>
+                            <p className="text-gray-700 bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">{qualitativeFeedback.finalSummary}</p>
                         </div>
+                        
+                        {/* --- THIS SECTION WAS REMOVED ---
                         <div>
                             <h3 className="text-xl font-bold text-gray-800 mb-2">Tone & Industry Fit</h3>
                             <p className="text-gray-700 bg-gray-100 p-4 rounded-lg">{qualitativeFeedback.toneAndIndustryFit}</p>
                         </div>
+                        --- END REMOVED SECTION --- */}
+                        
                         <div>
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Suggested Interview Questions</h3>
+                            <p className="text-sm text-gray-600 mb-3">Be prepared to answer questions that address potential gaps or highlight your strengths:</p>
                             <ul className="space-y-3 list-disc list-inside">
                                 {qualitativeFeedback.suggestedInterviewQuestions.map((q, i) => <li key={i} className="text-gray-700">{q}</li>)}
                             </ul>
@@ -164,7 +169,7 @@ const ATSResult = ({ result, onReset }) => {
     };
 
     return (
-        <div className="w-full bg-white p-6 rounded-xl shadow-2xl border transition-all animate-fade-in text-left">
+        <div className="w-full bg-white p-6 sm:p-8 rounded-xl shadow-2xl border transition-all animate-fade-in text-left">
             <div className="border-b border-gray-200 mb-6">
                 <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
                     {tabs.map((tab) => (

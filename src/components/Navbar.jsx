@@ -40,7 +40,7 @@ const Navbar = () => {
           <div className="hidden md:flex flex-1 justify-center">
             <div className="flex space-x-6">
               <button
-                onClick={() => handleProtectedRoute('/ats-checker')}
+                onClick={() => handleProtectedRoute('/dashboard/ats-checker')}
                 className="text-gray-500 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
               >
                 ATS Checker
