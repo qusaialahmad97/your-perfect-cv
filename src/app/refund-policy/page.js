@@ -5,15 +5,23 @@ const RefundPolicyPage = () => {
     <div className="max-w-4xl mx-auto p-6 sm:p-8 lg:p-12 bg-white">
       <div className="prose lg:prose-xl">
         <h1 className="text-4xl font-extrabold text-gray-800 mb-2">Refund Policy</h1>
-        <p className="text-sm text-gray-500 mb-8">Last updated: July 22, 2025</p>
+        <p className="text-sm text-gray-500 mb-8">Last updated: October 22, 2025</p>
 
         <p className="mb-6">
-          Your Perfect CV is a digital service. **All payments are non-refundable.**
+          Your Perfect CV is a digital service. While we strive for your complete satisfaction, all refund requests are processed by our authorized Merchant of Record, **Paddle**, in accordance with their policies.
         </p>
+        
+        <h2 className="mt-10 mb-4 font-bold">Our Refund Guarantee</h2>
+        <p className="mb-6">
+          If you are not completely satisfied with Your Perfect CV, you may request a full refund within **7 days** of your initial purchase.
+          We believe in the quality of our service and want you to feel confident in your purchase.
+        </p>
+
+        <h2 className="mt-10 mb-4 font-bold">How to Request a Refund</h2>
         <p className="mb-6">
           As our authorized Merchant of Record, all transactions, including refunds, are handled by **Paddle**.
-          If you believe you are entitled to a refund under a specific circumstance, you must contact Paddle directly to initiate a request.
-          Their refund process is outlined in their policies.
+          To initiate a refund request under our **7-day policy**, you must contact Paddle directly.
+          Please ensure your request is submitted within the **7-day period** following your purchase.
         </p>
         <p className="mb-6">
           To request a refund, please contact Paddle Support directly: **<a href="https://paddle.net" className="text-blue-600 hover:underline">https://paddle.net</a>**.
