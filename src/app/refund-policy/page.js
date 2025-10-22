@@ -12,31 +12,31 @@ const RefundPolicyPage = () => {
           Thank you for choosing Your Perfect CV. All purchases and payments for our digital service are processed by our authorized Merchant of Record, <strong>Paddle</strong>. As such, all transactions, including refunds, are subject to Paddle's Buyer Terms and Conditions.
         </p>
 
-        {/* --- Section 2: Rephrased the "Guarantee" to a "Policy" --- */}
-        <h2 className="mt-10 mb-4 font-bold">Our 7-Day Satisfaction Policy</h2>
+        {/* --- Section 2: Rephrased the "Guarantee" to a "Policy" with the new 14-day period --- */}
+        <h2 className="mt-10 mb-4 font-bold">Our 14-Day Satisfaction Policy</h2>
         <p className="mb-6">
-          We want you to be completely satisfied with your purchase. If you are not happy with our service for any reason, we offer a <strong>7-day satisfaction policy</strong> on your initial purchase. This means you can request a full refund within 7 days of your first payment.
+          We want you to be completely satisfied with your purchase. If you are not happy with our service for any reason, we offer a <strong>14-day satisfaction policy</strong> on your initial purchase. This means you can request a full refund within <strong>14 days</strong> of your first payment.
         </p>
         <p className="mb-6">
           This policy is our commitment to you, which we will ask Paddle to honor on your behalf. Please note that as per Paddle's terms, refunds may be refused in cases of fraud or abuse.
         </p>
         
-        {/* --- Section 3: Added section on Subscriptions (CRITICAL if you offer them) --- */}
+        {/* --- Section 3: Added section on Subscriptions, referencing the 14-day policy --- */}
         <h2 className="mt-10 mb-4 font-bold">Subscription Cancellations</h2>
         <p className="mb-6">
-          If you are on a recurring subscription plan, you can cancel at any time. Your cancellation will take effect at the end of your current billing period, and you will not be charged again. <strong>No refunds are provided for unused portions of a subscription period.</strong> The 7-day satisfaction policy applies only to the very first payment of your subscription.
+          If you are on a recurring subscription plan, you can cancel at any time. Your cancellation will take effect at the end of your current billing period, and you will not be charged again. <strong>No refunds are provided for unused portions of a subscription period.</strong> The 14-day satisfaction policy applies only to the very first payment of your subscription.
         </p>
 
-        {/* --- Section 4: Acknowledged statutory rights and the exception --- */}
+        {/* --- Section 4: Acknowledged statutory rights, which now align with your policy duration --- */}
         <h2 className="mt-10 mb-4 font-bold">Statutory Consumer Rights</h2>
         <p className="mb-6">
-          For consumers in certain regions (such as the EU and UK), you may have a statutory right to cancel your purchase within 14 days. However, because Your Perfect CV is a digital service made available for immediate use, you agree to waive this cancellation right upon accessing the service. Our 7-Day Satisfaction Policy is provided in addition to any statutory rights that cannot be waived.
+          For consumers in certain regions (such as the EU and UK), you have a statutory right to cancel your purchase within 14 days. Because Your Perfect CV is a digital service made available for immediate use, you agree to waive this cancellation right upon accessing the service. Our <strong>14-Day Satisfaction Policy</strong> is provided to ensure you have a risk-free trial period, aligning with these consumer protection standards.
         </p>
 
-        {/* --- Section 5: Clear instructions on how to request a refund --- */}
+        {/* --- Section 5: Clear instructions on how to request a refund within the 14-day window --- */}
         <h2 className="mt-10 mb-4 font-bold">How to Request a Refund</h2>
         <p className="mb-6">
-          To request a refund under our 7-day policy, you must contact Paddle Support directly within 7 days of your purchase. They handle all billing and will process your request.
+          To request a refund under our 14-day policy, you must contact Paddle Support directly within <strong>14 days</strong> of your purchase. They handle all billing and will process your request.
         </p>
         <p className="mb-6">
           You can contact Paddle Support here: <strong><a href="https://paddle.net" className="text-blue-600 hover:underline">https://paddle.net</a></strong>. Please have your order number or the email address you used to purchase ready.
